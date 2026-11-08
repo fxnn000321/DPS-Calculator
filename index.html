@@ -598,6 +598,17 @@ const num = n => Math.round(n).toLocaleString("en-US");
       ["Avg damage buff (1 tower)", "+" + (Math.round((FA_AVG[i] - 1) * 10000) / 100) + "%"]];
   });
 
+  // Good & Evil Shakers (also listed as Salt & Pepper): combined stats of both halves.
+  // ASSUMPTION: the pulse fires with every attack, so DPS = (hit damage + pulse damage) / cooldown.
+  const gePulse = [547, 878, 2111, 2911, 5351, 10626], geRadius = [18, 18, 20, 20, 22, 22];
+  for (const n of ["Good & Evil Shakers", "Salt & Pepper"]) {
+    get(n).upgrades.forEach((u, i) => {
+      u.dps = (u.damage + gePulse[i]) / u.cooldown;
+      u.details = [["Damage per hit", num(u.damage)], ["Pulse damage", num(gePulse[i])], ["Pulse radius", String(geRadius[i])],
+        ["Total per attack", num(u.damage + gePulse[i])], ["Cooldown", u.cooldown + "s"], ["Total spent", "$" + num(u.totalSpent)]];
+    });
+  }
+
   // Cauldron: income per tick, every 4 seconds
   const inc = [90, 200, 400, 700, 1000];
   get("Cauldron").upgrades.forEach((u, i) => {
