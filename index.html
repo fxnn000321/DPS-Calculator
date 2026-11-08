@@ -299,7 +299,7 @@ select{width:100%;background:var(--panel);border:1px solid var(--line);border-ra
     <ul class="plist" id="plist"></ul>
   </section>
 
-  <p class="foot">Fan-made tool, not affiliated with the game's developers. DPS = base DPS at the chosen upgrade × placed × (1 + 0.8% per level above 1) × (1 + 5% per star) × trait multipliers × strongest damage aura × strongest speed aura. The game data has no support buff numbers, so Support buff values come from the game tables; editable in the <code>AURAS</code> table in this file. Poison damage assumes one tick per second.</p>
+  <p class="foot">Fan-made tool, not affiliated with the game's developers. DPS = base DPS at the chosen upgrade × placed × (1 + 0.8% per level above 1) × (1 + 5% per star) × trait multipliers × self-buff uptime (e.g. Frankenstein Apple overcharge) × strongest damage aura × strongest speed aura. The game data has no support buff numbers, so Support buff values come from the game tables; editable in the <code>AURAS</code> table in this file. Timed buffs (Hot Chili, Frankenstein Apple) show the average of a single tower; staggering several of them raises the real uptime. Average = Buff × (Duration / Cooldown) + 1 × (1 − Duration / Cooldown). Poison damage assumes one tick per second.</p>
 </div>
 
 <dialog id="dlg2" aria-label="Team link"><div class="m-in"><h2>Copy your team link</h2><textarea id="linkBox" rows="4" readonly></textarea><button type="button" id="dlg2Close" class="btn-main">Close</button></div></dialog>
@@ -464,10 +464,10 @@ const DEFS = [
   ["Choco Coffin","limited",3,"Projectile",1,"chococoffin"],
   ["Corn","limited",3,"Projectile",1,"corn"],
   ["Forky","limited",5,"Projectile",0,"forky"],
-  ["Frankenstein Apple","limited",3,"PulseAoE",0,"frankapple"],
+  ["Frankenstein Apple","limited",3,"PulseAoEBuff",0,"frankapple"],
   ["Haunted Popcorn","limited",3,"ProjectileSplashDamage",1,"hauntedpopcorn"],
   ["Hocus Macaron","limited",3,"Projectile",0,"macaron"],
-  ["Hot Chili","limited",3,"Projectile",0,"hotchili"],
+  ["Hot Chili","limited",3,"ProjectileBuff",0,"hotchili"],
   ["Ice Scream","limited",3,"ProjectileLineAoE",1,"icescream"],
   ["Jawbreaker","limited",5,"ProjectileSplashDamage",1,"jawbreaker"],
   ["Scarecorn","limited",3,"Projectile",1,"scarecorn"],
@@ -515,6 +515,27 @@ const TRAITS = [
   { id: 19, name: "Ambrosia",     desc: "+100% damage, +50% range & speed, slows enemies, 25% cheaper", dmg: 1.00, rng: 0.50, spd: 0.50, cost: 0.25, slow: true }
 ];
 
+/* ---------- Timed buffs (uptime scaling) ----------
+   Average_Multiplier = Buff * (Duration / Cooldown) + 1.0 * (1 - Duration / Cooldown) */
+const avgMult = (mult, dur, cd) => mult * (dur / cd) + 1.0 * (1 - dur / cd);
+
+// Hot Chili: attack speed x2 for a few seconds. Base tier = 3s every 8s, max tier = 4s every 6s.
+// ASSUMPTION: the tiers in between are interpolated linearly. Edit these two arrays if you have the real values.
+const HC_MULT = 2;
+const HC_DUR  = [3, 3.2, 3.4, 3.6, 3.8, 4];
+const HC_CD   = [8, 7.6, 7.2, 6.8, 6.4, 6];
+const HC_AVG  = HC_DUR.map((d, i) => avgMult(HC_MULT, d, HC_CD[i]));   // 1.375 ... 1.6667
+
+// Frankenstein Apple: DAMAGE buff for nearby towers (overcharge) for 4s, cooldown 16-18s
+const FA_MULT = [1.6, 1.7, 1.8, 1.9, 2.0, 2.0];
+const FA_DUR  = [4, 4, 4, 4, 4, 4];
+const FA_CD   = [16, 16, 17, 17, 18, 18];
+const FA_AVG  = FA_DUR.map((d, i) => avgMult(FA_MULT[i], d, FA_CD[i]));   // 1.15 ... 1.2222
+
+// Towers whose buff only runs part of the time: values shown are the AVERAGE of ONE tower
+const TIMED_BUFFS = new Set(["Hot Chili", "Frankenstein Apple"]);
+const TIMED_NOTE = "Timed buff: the value is the average of a single tower (buff x uptime). Several of these towers with staggered timings keep the buff up longer, so the real average can be much higher.";
+
 /* ---------- Support auras (real values from the game tables) ----------
    vals = buff per upgrade index.  cat: "damage" | "speed" | "range" */
 // Taco and Frankentaco share one progression (tier 0 to 5): speed 10 to 45%, damage 10 to 45%, range 2 to 10%
@@ -533,7 +554,9 @@ const AURAS = {
                          { cat: "damage", vals: TACO_DAMAGE },
                          { cat: "range",  vals: TACO_RANGE }],
   "Soda":               [{ cat: "range",  vals: [0.06, 0.07, 0.08, 0.09, 0.10] }],
-  "Cauldron":           [{ cat: "damage", vals: [0.27, 0.31, 0.35, 0.39, 0.45] }]
+  "Cauldron":           [{ cat: "damage", vals: [0.27, 0.31, 0.35, 0.39, 0.45] }],
+  "Hot Chili":          [{ cat: "speed",  vals: HC_AVG.map(m => m - 1) }],
+  "Frankenstein Apple": [{ cat: "damage", vals: FA_AVG.map(m => m - 1) }]
 };
 
 /* ---------- Special DPS / income towers ---------- */
@@ -558,12 +581,21 @@ const num = n => Math.round(n).toLocaleString("en-US");
     u.details = [["Poison / tick", num(sodaTick[i])], ["Poison duration", "4s"], ["Cooldown", u.cooldown + "s"]];
   });
 
-  // Hot Chili: direct hit + non-stacking poison zone
+  // Hot Chili: direct hit + non-stacking poison zone + timed attack speed aura
   const hcTick = [22, 39, 73, 148, 304, 600], zoneMax = [6, 6, 6, 6, 8, 8];
   get("Hot Chili").upgrades.forEach((u, i) => {
     const direct = u.damage / u.cooldown;
     u.dps = direct + hcTick[i] * POISON_TICKS_PER_SEC * Math.min(1.5, u.cooldown) / u.cooldown;
-    u.details = [["Direct hit", num(u.damage)], ["Poison / tick", num(hcTick[i])], ["Poison duration", "1.5s"], ["Zone max / radius", zoneMax[i] + " / 3.5"]];
+    u.details = [["Direct hit", num(u.damage)], ["Poison / tick", num(hcTick[i])], ["Poison duration", "1.5s"], ["Zone max / radius", zoneMax[i] + " / 3.5"],
+      ["Speed aura", `${HC_MULT}x for ${HC_DUR[i]}s / ${HC_CD[i]}s`],
+      ["Avg speed buff (1 tower)", "+" + (Math.round((HC_AVG[i] - 1) * 10000) / 100) + "%"]];
+  });
+
+  // Frankenstein Apple: damage buff aura with uptime (its own attack stays as listed in the table)
+  get("Frankenstein Apple").upgrades.forEach((u, i) => {
+    u.details = [["Damage buff (overcharge)", FA_MULT[i] + "x"], ["Duration / cooldown", `${FA_DUR[i]}s / ${FA_CD[i]}s`],
+      ["Uptime", (Math.round(FA_DUR[i] / FA_CD[i] * 1000) / 10) + "%"],
+      ["Avg damage buff (1 tower)", "+" + (Math.round((FA_AVG[i] - 1) * 10000) / 100) + "%"]];
   });
 
   // Cauldron: income per tick, every 4 seconds
@@ -621,10 +653,11 @@ function typeTags(t){
   if (/Buff/.test(a)) s.add("Support");
   if (/Income/.test(a)) s.add("Income");
   if (/AoE|Splash|Cleave/.test(a)) s.add("AoE");
-  if (a === "Projectile" || a === "ProjectileBoomerang") s.add("Single-Target");
+  if (a === "Projectile" || a === "ProjectileBoomerang" || a === "ProjectileBuff") s.add("Single-Target");
   return s;
 }
 const TYPES = ["AoE","Single-Target","Support","Income"];
+const atkLabel = t => t.attackType.replace(/Buff$/, " + Support");
 const used = (team = state.team) => team.reduce((n,s) => n + s.qty, 0);
 const isSupport = t => !!AURAS[t.name];
 const hasDps = t => t.upgrades.some(u => u.dps > 0);
@@ -782,7 +815,7 @@ function cardEl(s){
   const minus = h("button", { type:"button", "aria-label":"Fewer", text:"−", onclick: () => setQty(s, s.qty-1) });
   const el = h("article", { class:"card", style:`--rc:var(--${t.rarity})`, "data-id":s.id, tabindex:"0", role:"button", "aria-label":`Customize ${t.name}` },
     h("div", { class:"card-top" },
-      h("div", {}, h("div", { class:"cname", text:t.name }), h("div", { class:"cmeta" }, h("span", { class:"rar", text:cap(t.rarity) }), ` · ${t.attackType}`), meta),
+      h("div", {}, h("div", { class:"cname", text:t.name }), h("div", { class:"cmeta" }, h("span", { class:"rar", text:cap(t.rarity) }), ` · ${atkLabel(t)}`), meta),
       dps),
     tags,
     h("div", { class:"card-foot" },
@@ -807,7 +840,7 @@ function cardEl(s){
     if (r.inc > 0) g.push(h("span", { class:"tag tr", text:`Income ${money(r.inc)}/min` }));
     r.recv.forEach(([c,v,src]) => g.push(h("span", { class:"tag buff", text:`${c} +${pct(v)} from ${src}` })));
     if (r.eff) r.eff.forEach(e => { const on = isApplied(t, e);
-      g.push(h("span", { class:"tag " + (on ? "buff" : "warn"), text: on ? `${cap(e.cat)} +${pct(e.value)} applied` : `${cap(e.cat)} +${pct(e.value)} overridden` })); });
+      g.push(h("span", { class:"tag " + (on ? "buff" : "warn"), text: (TIMED_BUFFS.has(t.name) ? `${cap(e.cat)} +${pct(e.value)} avg` : `${cap(e.cat)} +${pct(e.value)}`) + (on ? " applied" : " overridden") })); });
     tags.replaceChildren(...g);
   };
   return el;
@@ -833,7 +866,7 @@ function rowEl(s){
     if (r.jumbo === "on") bits.push("Jumbo");
     if (r.jumbo === "invalid") bits.push("Jumbo invalid");
     r.recv.forEach(([c,v]) => bits.push(`${c} +${pct(v)}`));
-    if (r.eff) r.eff.forEach(e => bits.push(`${cap(e.cat)} +${pct(e.value)}${isApplied(t, e) ? "" : " (overridden)"}`));
+    if (r.eff) r.eff.forEach(e => bits.push(`${cap(e.cat)} +${pct(e.value)}${TIMED_BUFFS.has(t.name) ? " avg" : ""}${isApplied(t, e) ? "" : " (overridden)"}`));
     if (r.inc > 0) bits.push(`Income ${money(r.inc)}/min`);
     if (t.antiAir) bits.push("Anti-Air");
     sub.textContent = bits.join(" · ");
@@ -879,7 +912,7 @@ function openModal(s){
   body.replaceChildren(
     h("div", { class:"m-head", style:`--rc:var(--${t.rarity})` },
       h("div", {}, h("div", { class:"cname", style:"font-size:22px", text:t.name }),
-        h("div", { class:"cmeta" }, h("span", { class:"rar", text:cap(t.rarity) }), ` · ${t.attackType} · max ${t.maxPlaced}${t.antiAir ? " · Anti-Air" : ""}`)),
+        h("div", { class:"cmeta" }, h("span", { class:"rar", text:cap(t.rarity) }), ` · ${atkLabel(t)} · max ${t.maxPlaced}${t.antiAir ? " · Anti-Air" : ""}`)),
       h("button", { class:"x", type:"button", "aria-label":"Close", text:"✕", onclick: () => dlg.close() })),
     h("div", { class:"field" }, h("div", { class:"lab" }, "Trait"), sel, o.desc, bossRow),
     lvField,
@@ -926,6 +959,7 @@ function openModal(s){
       });
       o.brk.replaceChildren(h("div", { class:"brk" },
         h("h4", { text:"Support buff breakdown" }),
+        TIMED_BUFFS.has(t.name) ? h("p", { class:"ok", text: TIMED_NOTE }) : null,
         h("p", { text: eff.length ? "Raw is what this tower provides. Applied is what your damage towers actually receive: only the strongest aura per category counts." : "This tower boosts income only, so it does not change DPS." }),
         eff.length ? h("table", {}, h("thead", {}, h("tr", {}, h("th", { text:"Buff" }), h("th", { text:"Raw" }), h("th", { text:"Applied" }), h("th", { text:"Status" }))), h("tbody", {}, rows)) : null));
     } else o.brk.replaceChildren();
