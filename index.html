@@ -103,6 +103,8 @@ h1 b{background:linear-gradient(90deg,var(--cyan),var(--violet),var(--pink));-we
 .toggle{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:var(--muted);cursor:pointer}
 .toggle input,.bossrow input{accent-color:var(--violet);width:18px;height:18px}
 
+#btnClear[data-arm="1"]{background:linear-gradient(135deg,#ff6b6b,#ff3d6e);box-shadow:0 6px 24px rgba(255,107,107,.4)}
+
 /* sections */
 .sec-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:0 0 12px}
 h2{margin:0;font-size:20px;font-weight:700}
@@ -211,6 +213,34 @@ select{width:100%;background:var(--panel);border:1px solid var(--line);border-ra
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translate(-50%,20px);background:#fff;color:#10142b;padding:11px 18px;border-radius:12px;font-weight:600;opacity:0;pointer-events:none;transition:.2s;z-index:100;max-width:92vw}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 
+/* trait picker */
+.trait-btn{width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left;padding:10px 14px;min-height:54px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.trait-btn:hover{border-color:var(--cyan)}
+.trait-btn .tmain{display:grid;gap:0}
+.trait-btn .tmain b{font-size:15px;color:var(--text)}
+.trait-btn .tsub{font-size:12px;color:var(--muted)}
+.trait-btn .tchev{color:var(--cyan);font-size:18px}
+#dlgTrait{width:min(640px,94vw)}
+.tp-in{padding:16px;display:grid;gap:12px}
+.tp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.tp-head h2{font-size:20px}
+.tp-head p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.tp-head .x{width:42px;padding:0;flex:none}
+.tp-list{display:grid;gap:8px}
+.tp-item{width:100%;display:grid;gap:6px;text-align:left;padding:12px 14px;border-radius:14px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--tc)}
+.tp-item:hover{border-color:var(--tc)}
+.tp-item[aria-pressed=true]{border-color:var(--cyan);border-left-color:var(--cyan);background:rgba(62,230,224,.08);box-shadow:0 0 0 1px var(--cyan)}
+.tp-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tp-name{font-weight:700;font-size:16px;color:var(--tc)}
+.tp-on{font-size:12px;font-weight:700;color:var(--cyan)}
+.tp-desc{font-size:13px;color:var(--muted);line-height:1.4}
+.tp-chips{display:flex;flex-wrap:wrap;gap:5px}
+.tp-chip{font-size:11px;padding:2px 9px;border-radius:99px;border:1px solid var(--line);color:var(--text);font-variant-numeric:tabular-nums}
+.tp-chip.pos{color:var(--green);border-color:rgba(94,242,160,.45);background:rgba(94,242,160,.07)}
+.tp-chip.neg{color:var(--red);border-color:rgba(255,107,107,.45);background:rgba(255,107,107,.07)}
+.tp-chip.sp{color:var(--gold);border-color:rgba(255,200,87,.45);background:rgba(255,200,87,.07)}
+@media (max-width:640px){#dlgTrait{margin:auto auto 0;width:100%;max-width:100%;max-height:90vh;border-radius:22px 22px 0 0}}
+
 @media (max-width:900px){.dash{grid-template-columns:1fr 1fr}.compare{grid-column:1/-1}}
 @media (max-width:640px){
   .panel{left:0;right:0;top:auto;bottom:0;width:100%;max-height:86vh;border-left:0;border-top:1px solid var(--violet);border-radius:22px 22px 0 0;transform:translateY(100%)}
@@ -271,7 +301,7 @@ select{width:100%;background:var(--panel);border:1px solid var(--line);border-ra
       <div class="actions">
         <div class="seg" role="group" aria-label="Team view"><button type="button" id="vCards" aria-pressed="true">Cards</button><button type="button" id="vTable" aria-pressed="false">Table</button></div>
         <button class="btn-main" id="btnShare" type="button">Copy team link</button>
-        <button class="linkbtn" id="btnClear" type="button">Clear loadout</button>
+        <button class="btn-main" id="btnClear" type="button">Clear loadout</button>
         <div class="picker">
           <button class="btn-main" id="btnPick" type="button" aria-haspopup="true" aria-expanded="false">+ Add tower</button>
           <div class="panel" id="panel" role="dialog" aria-label="Choose a tower">
@@ -304,6 +334,7 @@ select{width:100%;background:var(--panel);border:1px solid var(--line);border-ra
 
 <dialog id="dlg2" aria-label="Team link"><div class="m-in"><h2>Copy your team link</h2><textarea id="linkBox" rows="4" readonly></textarea><button type="button" id="dlg2Close" class="btn-main">Close</button></div></dialog>
 <dialog id="dlg" aria-label="Tower settings"><div class="m-in" id="dlgBody"></div></dialog>
+<dialog id="dlgTrait" aria-label="Choose a trait"><div class="tp-in" id="tpBody"></div></dialog>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -476,6 +507,7 @@ const DEFS = [
   ["Avocado","event",5,"ProjectileSplashDamage",0,"avocado"],
   ["Van Garlic","secret",1,"ProjectileSplashDamage",1,"vangarlic"]
 ];
+
 
 const slugify = s => s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
@@ -890,7 +922,8 @@ function rowEl(s){
 function isApplied(t, e){ const b = lastWith.auras[e.cat]; return !!b && b.src === t.name && Math.abs(b.value - e.value) < 1e-9; }
 
 /* ---------- modal ---------- */
-const dlg = $("#dlg");
+const dlg = $("#dlg"), dlgTrait = $("#dlgTrait");
+dlgTrait.addEventListener("click", e => { if (e.target === dlgTrait) dlgTrait.close(); });
 let modalUpd = null;
 dlg.addEventListener("click", e => { if (e.target === dlg) dlg.close(); });
 dlg.addEventListener("close", () => {
@@ -919,8 +952,9 @@ function openModal(s){
   const shinyCb = h("input", { type:"checkbox" });
   shinyCb.addEventListener("change", () => { s.shiny = shinyCb.checked; update(); });
   const shinyField = h("div", { class:"field" }, h("label", { class:"bossrow" }, shinyCb, "Shiny"));
-  const sel = h("select", { "aria-label":"Trait" }, TRAITS.map(x => h("option", { value:x.id, text:x.name })));
-  sel.value = s.trait; sel.addEventListener("change", () => { s.trait = +sel.value; update(); });
+  const traitName = h("b"), traitSub = h("span", { class:"tsub" });
+  const traitBtn = h("button", { type:"button", class:"trait-btn", "aria-haspopup":"dialog", onclick: () => openTraitPicker(s) },
+    h("span", { class:"tmain" }, traitName, traitSub), h("span", { class:"tchev", text:"▾" }));
   const bossCb = h("input", { type:"checkbox", id:"bossCb" }); bossCb.checked = !!s.boss;
   bossCb.addEventListener("change", () => { s.boss = bossCb.checked; update(); });
   const bossRow = h("label", { class:"bossrow" }, bossCb, "Target is a boss (+25% damage on this tower)");
@@ -931,7 +965,7 @@ function openModal(s){
       h("div", {}, h("div", { class:"cname", style:"font-size:22px", text:t.name }),
         h("div", { class:"cmeta" }, h("span", { class:"rar", text:cap(t.rarity) }), ` · ${atkLabel(t)} · max ${t.maxPlaced}${t.antiAir ? " · Anti-Air" : ""}`)),
       h("button", { class:"x", type:"button", "aria-label":"Close", text:"✕", onclick: () => dlg.close() })),
-    h("div", { class:"field" }, h("div", { class:"lab" }, "Trait"), sel, o.desc, bossRow),
+    h("div", { class:"field" }, h("div", { class:"lab" }, "Trait"), traitBtn, o.desc, bossRow),
     lvField,
     h("div", { class:"field" }, h("label", {}, "Upgrade ", o.up), upR),
     starField, jumboField, shinyField,
@@ -953,7 +987,7 @@ function openModal(s){
     shinyCb.checked = !!s.shiny;
     jumboCb.checked = !!s.jumbo; jumboCb.disabled = !jOk && !s.jumbo;
     jumboNote.textContent = jOk ? "" : (s.jumbo ? "Invalid: Jumbo only works on Legendary, Mythic, Limited or Event towers, so it is not applied." : "Jumbo only works on Legendary, Mythic, Limited or Event towers.");
-    upR.value = s.up; lvR.value = s.lvl; sel.value = s.trait; bossCb.checked = !!s.boss;
+    upR.value = s.up; lvR.value = s.lvl; traitName.textContent = TRAITS[s.trait].name; traitSub.textContent = s.trait ? "Tap to change trait" : "Tap to choose a trait"; bossCb.checked = !!s.boss;
     o.up.textContent = `${s.up}/${t.upgrades.length-1}` + (u.dps > 0 ? ` · ${fmt(u.dps)} base DPS` : "");
     o.lv.textContent = `${s.lvl} (+${pct(rw.lb)} damage)`;
     o.desc.textContent = s.trait ? TRAITS[s.trait].desc : "";
@@ -987,6 +1021,46 @@ function openModal(s){
   // bring the popup straight into view, from the top
   dlg.scrollTop = 0;
   requestAnimationFrame(() => dlg.scrollIntoView({ behavior:smooth, block:"center" }));
+}
+
+/* ---------- trait picker ---------- */
+const traitTier = id => id === 0 ? 0 : id <= 4 ? 1 : id <= 8 ? 2 : id <= 15 ? 3 : id <= 17 ? 4 : 5;
+const TIER_COLOR = ["--muted", "--common", "--rare", "--epic", "--legendary", "--mythic"];
+function traitChips(tr){
+  const c = [];
+  if (tr.dmg) c.push([`Damage ${tr.dmg > 0 ? "+" : ""}${pct(tr.dmg)}`, tr.dmg > 0 ? "pos" : "neg"]);
+  if (tr.rng) c.push([`Range ${tr.rng > 0 ? "+" : ""}${pct(tr.rng)}`, tr.rng > 0 ? "pos" : "neg"]);
+  if (tr.spd) c.push([`Speed ${tr.spd > 0 ? "+" : ""}${pct(tr.spd)}`, tr.spd > 0 ? "pos" : "neg"]);
+  if (tr.cost) c.push([`${pct(tr.cost)} cheaper`, "pos"]);
+  if (tr.firstFree) c.push(["First upgrade free", "sp"]);
+  if (tr.streak) c.push([`${pct(tr.streak.p)} streak: ${tr.streak.n} hits at ${tr.streak.m}x`, "sp"]);
+  if (tr.crit) c.push([`${pct(tr.crit.p)} crit for ${tr.crit.m}x`, "sp"]);
+  if (tr.boss) c.push([`+${pct(tr.boss)} vs bosses`, "sp"]);
+  if (tr.burn) c.push([`Burn +${pct(tr.burn)}`, "sp"]);
+  if (tr.slow) c.push(["Slows enemies", "sp"]);
+  if (tr.auraBoost) c.push([`Buffs & income +${pct(tr.auraBoost - 1)}`, "sp"]);
+  return c;
+}
+function openTraitPicker(s){
+  const t = byId.get(s.id);
+  const items = TRAITS.map(tr => {
+    const on = s.trait === tr.id;
+    const b = h("button", { type:"button", class:"tp-item", "aria-pressed":String(on), style:`--tc:var(${TIER_COLOR[traitTier(tr.id)]})`,
+      onclick: () => { s.trait = tr.id; dlgTrait.close(); update(); toast(tr.id ? `${t.name}: ${tr.name}` : `${t.name}: trait removed`); } },
+      h("span", { class:"tp-top" }, h("span", { class:"tp-name", text:tr.name }), on ? h("span", { class:"tp-on", text:"✓ Selected" }) : null),
+      h("span", { class:"tp-desc", text:tr.desc }),
+      tr.id ? h("span", { class:"tp-chips" }, traitChips(tr).map(([x,k]) => h("span", { class:"tp-chip " + k, text:x }))) : null);
+    return b;
+  });
+  $("#tpBody").replaceChildren(
+    h("div", { class:"tp-head" },
+      h("div", {}, h("h2", { text:"Choose a trait" }), h("p", { text:`For ${t.name}. Tap a trait to apply it.` })),
+      h("button", { class:"x", type:"button", "aria-label":"Close", text:"✕", onclick: () => dlgTrait.close() })),
+    h("div", { class:"tp-list" }, items));
+  dlgTrait.showModal();
+  dlgTrait.scrollTop = 0;
+  const cur = items[s.trait];
+  if (cur && s.trait > 3) requestAnimationFrame(() => cur.scrollIntoView({ block:"center" }));
 }
 
 /* ---------- update ---------- */
@@ -1118,7 +1192,7 @@ $("#presetName").addEventListener("input", () => { $("#nameErr").hidden = true; 
 $("#vCards").addEventListener("click", () => setView("cards"));
 $("#vTable").addEventListener("click", () => setView("table"));
 document.addEventListener("keydown", e => {
-  if (e.ctrlKey || e.metaKey || e.altKey || dlg2.open) return;
+  if (e.ctrlKey || e.metaKey || e.altKey || dlg2.open || dlgTrait.open) return;
   const el = e.target, tag = el.tagName, type = (el.type || "").toLowerCase();
   const typing = tag === "TEXTAREA" || tag === "SELECT" || (tag === "INPUT" && type !== "range" && type !== "checkbox");
   if (typing) return;
