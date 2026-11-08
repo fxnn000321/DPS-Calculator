@@ -299,7 +299,7 @@ select{width:100%;background:var(--panel);border:1px solid var(--line);border-ra
     <ul class="plist" id="plist"></ul>
   </section>
 
-  <p class="foot">Fan-made tool, not affiliated with the game's developers. DPS = base DPS at the chosen upgrade × placed × (1 + 0.8% per level above 1) × (1 + 5% per star) × trait multipliers × self-buff uptime (e.g. Frankenstein Apple overcharge) × strongest damage aura × strongest speed aura. The game data has no support buff numbers, so Support buff values come from the game tables; editable in the <code>AURAS</code> table in this file. Timed buffs (Hot Chili, Frankenstein Apple) show the average of a single tower; staggering several of them raises the real uptime. Average = Buff × (Duration / Cooldown) + 1 × (1 − Duration / Cooldown). Poison damage assumes one tick per second.</p>
+  <p class="foot">Fan-made tool, not affiliated with the game's developers. DPS = base DPS at the chosen upgrade × placed × (1 + 0.8% per level above 1) × (1 + 5% per star) × (Shiny: +10% attack speed) × trait multipliers × self-buff uptime (e.g. Frankenstein Apple overcharge) × strongest damage aura × strongest speed aura. The game data has no support buff numbers, so Support buff values come from the game tables; editable in the <code>AURAS</code> table in this file. Timed buffs (Hot Chili, Frankenstein Apple) show the average of a single tower; staggering several of them raises the real uptime. Average = Buff × (Duration / Cooldown) + 1 × (1 − Duration / Cooldown). Poison damage assumes one tick per second.</p>
 </div>
 
 <dialog id="dlg2" aria-label="Team link"><div class="m-in"><h2>Copy your team link</h2><textarea id="linkBox" rows="4" readonly></textarea><button type="button" id="dlg2Close" class="btn-main">Close</button></div></dialog>
@@ -663,6 +663,7 @@ const isSupport = t => !!AURAS[t.name];
 const hasDps = t => t.upgrades.some(u => u.dps > 0);
 const EXOTIC = TRAITS.find(x => x.name === "Exotic").id;
 const STAR_BONUS = 0.05;      // per star: +5% DPS, or +5% buff strength on supports
+const SHINY_SPEED = 0.10;     // Shiny: +10% attack speed
 const JUMBO_RANGE = 0.10;     // Jumbo: +10% range
 const JUMBO_RARITIES = ["legendary", "mythic", "limited", "event"];  // "Unlimited" = the Limited tier
 const jumboValid = t => JUMBO_RARITIES.includes(t.rarity);
@@ -704,9 +705,9 @@ function compute(buffs, team = state.team){
     const bd = gets ? best("damage", s.id) : null, bs = gets ? best("speed", s.id) : null, br = gets ? best("range", s.id) : null;
     const dA = bd ? bd.value : 0, sA = bs ? bs.value : 0, rA = br ? br.value : 0;
     const m = traitMods(tr, s.boss), lb = (s.lvl-1)*LIMITS.levelBonusPerLevel;
-    const starM = 1 + (s.stars||0)*STAR_BONUS;
+    const starM = 1 + (s.stars||0)*STAR_BONUS, shinyM = s.shiny ? 1 + SHINY_SPEED : 1;
     const jv = s.jumbo && jumboValid(t) ? 1 + JUMBO_RANGE : 1;
-    const dps = u.dps > 0 ? u.dps*s.qty*(1+lb)*starM*m.dmg*m.spd*m.extra*(1+dA)*(1+sA) : 0;
+    const dps = u.dps > 0 ? u.dps*s.qty*(1+lb)*starM*shinyM*m.dmg*m.spd*m.extra*(1+dA)*(1+sA) : 0;
     total += dps; if (t.antiAir) aa += dps;
     const inc = u.income ? u.income*(60/u.cooldown)*s.qty*(tr.auraBoost || 1) : 0;
     income += inc;
@@ -731,7 +732,7 @@ function addTower(id){
   } else {
     if (state.team.length >= MAX_SLOTS) return toast("Loadout is full: 6 different towers max.");
     const q = Math.min(t.maxPlaced, LIMITS.maxUnits - used());
-    state.team.push({ id, qty:q, up:t.upgrades.length-1, lvl:1, trait:0, boss:false, stars:0, jumbo:false });
+    state.team.push({ id, qty:q, up:t.upgrades.length-1, lvl:1, trait:0, boss:false, stars:0, jumbo:false, shiny:false });
   }
   structure(); toast(`Added ${t.name}`);
 }
@@ -835,6 +836,7 @@ function cardEl(s){
     if (s.trait) g.push(h("span", { class:"tag tr", text:TRAITS[s.trait].name }));
     if (s.trait === EXOTIC && s.boss) g.push(h("span", { class:"tag tr", text:"Boss +25%" }));
     if (r.stars) g.push(h("span", { class:"tag tr", text:`★ ${r.stars}` }));
+    if (s.shiny) g.push(h("span", { class:"tag tr", text:"Shiny +10% speed" }));
     if (r.jumbo === "on") g.push(h("span", { class:"tag tr", text:"Jumbo +10% range" }));
     if (r.jumbo === "invalid") g.push(h("span", { class:"tag warn", text:"Jumbo invalid (not applied)" }));
     if (r.inc > 0) g.push(h("span", { class:"tag tr", text:`Income ${money(r.inc)}/min` }));
@@ -863,6 +865,7 @@ function rowEl(s){
     dps.textContent = r.dps > 0 ? fmt(r.dps) : "–"; cost.textContent = money(r.cost);
     const bits = [];
     if (r.stars) bits.push(`★${r.stars}`);
+    if (s.shiny) bits.push("Shiny");
     if (r.jumbo === "on") bits.push("Jumbo");
     if (r.jumbo === "invalid") bits.push("Jumbo invalid");
     r.recv.forEach(([c,v]) => bits.push(`${c} +${pct(v)}`));
@@ -901,7 +904,10 @@ function openModal(s){
   const jumboCb = h("input", { type:"checkbox" });
   jumboCb.addEventListener("change", () => { s.jumbo = jumboCb.checked; update(); });
   const jumboNote = h("div", { class:"hint2" });
-  const jumboField = h("div", { class:"field" }, h("label", { class:"bossrow" }, jumboCb, "Jumbo (+10% range)"), jumboNote);
+  const jumboField = h("div", { class:"field" }, h("label", { class:"bossrow" }, jumboCb, "Jumbo"), jumboNote);
+  const shinyCb = h("input", { type:"checkbox" });
+  shinyCb.addEventListener("change", () => { s.shiny = shinyCb.checked; update(); });
+  const shinyField = h("div", { class:"field" }, h("label", { class:"bossrow" }, shinyCb, "Shiny"));
   const sel = h("select", { "aria-label":"Trait" }, TRAITS.map(x => h("option", { value:x.id, text:x.name })));
   sel.value = s.trait; sel.addEventListener("change", () => { s.trait = +sel.value; update(); });
   const bossCb = h("input", { type:"checkbox", id:"bossCb" }); bossCb.checked = !!s.boss;
@@ -917,7 +923,7 @@ function openModal(s){
     h("div", { class:"field" }, h("div", { class:"lab" }, "Trait"), sel, o.desc, bossRow),
     lvField,
     h("div", { class:"field" }, h("label", {}, "Upgrade ", o.up), upR),
-    starField, jumboField,
+    starField, jumboField, shinyField,
     h("div", { class:"mstats" },
       h("div", {}, h("span", { text:"DPS with buff" }), o.dw),
       h("div", {}, h("span", { text:"DPS without buff" }), o.dn),
@@ -933,6 +939,7 @@ function openModal(s){
     starBtns.forEach((b,i) => b.classList.toggle("on", i < (s.stars||0)));
     starInfo.textContent = `+${(s.stars||0)*5}% ` + (isSupport(t) ? (hasDps(t) ? "DPS and buff strength" : "buff strength") : "DPS");
     const jOk = jumboValid(t);
+    shinyCb.checked = !!s.shiny;
     jumboCb.checked = !!s.jumbo; jumboCb.disabled = !jOk && !s.jumbo;
     jumboNote.textContent = jOk ? "" : (s.jumbo ? "Invalid: Jumbo only works on Legendary, Mythic, Limited or Event towers, so it is not applied." : "Jumbo only works on Legendary, Mythic, Limited or Event towers.");
     upR.value = s.up; lvR.value = s.lvl; sel.value = s.trait; bossCb.checked = !!s.boss;
@@ -1019,20 +1026,20 @@ document.querySelectorAll(".ptab").forEach((b,i) => b.addEventListener("click", 
 function structure(){ renderTeam(); if (panel.classList.contains("open")) renderTiles(); update(); }
 
 /* ---------- share / presets ---------- */
-const slotStr = s => [s.id, s.qty, s.up, s.lvl, s.trait, s.boss?1:0, s.stars||0, s.jumbo?1:0].join(":");
+const slotStr = s => [s.id, s.qty, s.up, s.lvl, s.trait, s.boss?1:0, s.stars||0, s.jumbo?1:0, s.shiny?1:0].join(":");
 const serialize = () => state.players.map((tm,i) => `t${i+1}=${tm.map(slotStr).join(",")}`).join("&") + `&cur=${state.cur+1}`;
 function writeHash(){ try { history.replaceState(null, "", "#" + serialize()); } catch(e){} }
 function parseTeam(csv, note){
   const team = []; let units = 0;
   for (const part of csv.split(",").filter(Boolean)){
-    const [id,qty,up,lvl,trait,boss,stars,jumbo] = part.split(":"), t = byId.get(id);
+    const [id,qty,up,lvl,trait,boss,stars,jumbo,shiny] = part.split(":"), t = byId.get(id);
     if (!t || team.some(x => x.id === id)) continue;
     if (team.length >= MAX_SLOTS){ note.add("Trimmed to the 6-tower loadout limit."); continue; }
     let q = clamp(parseInt(qty,10)||1, 1, t.maxPlaced);
     if (units + q > LIMITS.maxUnits){ q = LIMITS.maxUnits - units; note.add("Trimmed to the 20-tower limit."); if (q < 1) continue; }
     units += q;
     team.push({ id, qty:q, up:clamp(parseInt(up,10)||0, 0, t.upgrades.length-1), lvl:clamp(parseInt(lvl,10)||1, 1, LIMITS.maxLevel),
-      trait: TRAITS[+trait] ? +trait : 0, boss: boss === "1", stars: clamp(parseInt(stars,10)||0, 0, 5), jumbo: jumbo === "1" });
+      trait: TRAITS[+trait] ? +trait : 0, boss: boss === "1", stars: clamp(parseInt(stars,10)||0, 0, 5), jumbo: jumbo === "1", shiny: shiny === "1" });
   }
   return team;
 }
