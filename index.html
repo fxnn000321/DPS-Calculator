@@ -42,7 +42,7 @@ h1 b{background:linear-gradient(90deg,var(--cyan),var(--violet),var(--pink));-we
 .tb-stats{display:flex;gap:14px;flex-wrap:wrap;justify-content:flex-end;color:var(--muted)}
 .tb-stats b{color:var(--text);font-variant-numeric:tabular-nums}
 .tb-stats .cost b{color:var(--gold)}
-@media (max-width:520px){.hide-xs{display:none}.tb-brand{display:none}.tb-in{justify-content:center}.tb-stats{gap:12px}}
+@media (max-width:520px){.hide-xs{display:none}.tb-brand{display:none}.tb-stats{gap:12px}}
 .ptabs{max-width:1180px;margin:0 auto;padding:0 16px 8px;display:flex;gap:6px}
 .ptab{flex:1;display:grid;gap:0;padding:5px 6px;min-height:46px;border-radius:12px;text-align:center;line-height:1.2}
 .ptab .pn{font-weight:700;font-size:13px}
@@ -213,6 +213,70 @@ select{width:100%;background:var(--panel);border:1px solid var(--line);border-ra
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translate(-50%,20px);background:#fff;color:#10142b;padding:11px 18px;border-radius:12px;font-weight:600;opacity:0;pointer-events:none;transition:.2s;z-index:100;max-width:92vw}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 
+/* rankings + tips */
+.tb-left{display:flex;align-items:center;gap:12px}
+.rank-btn{min-height:34px;padding:4px 14px;font-size:13px;font-weight:700;border-radius:99px;border:1px solid rgba(255,200,87,.55);color:var(--gold);background:rgba(255,200,87,.08)}
+.rank-btn:hover{border-color:var(--gold);background:rgba(255,200,87,.16)}
+dialog.rk{width:min(1000px,96vw);height:min(92vh,900px);max-height:92vh;border-color:rgba(255,200,87,.5);background:radial-gradient(900px 400px at 50% -10%,rgba(139,108,255,.22),transparent 60%),#0e1126;overflow:auto}
+.rk-head{position:sticky;top:0;z-index:5;background:linear-gradient(#0e1126 80%,rgba(14,17,38,0));padding:16px 18px 6px}
+.rk-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.rk-top h2{font-size:24px;background:linear-gradient(90deg,var(--gold),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
+.rk-top .x{width:42px;padding:0}
+.rk-tabs{display:flex;gap:6px;overflow-x:auto;padding:10px 0 4px;scrollbar-width:none}
+.rk-tabs::-webkit-scrollbar{display:none}
+.rk-tab{flex:none;min-height:38px;padding:6px 14px;border-radius:99px;font-size:13px;font-weight:600;white-space:nowrap}
+.rk-tab[aria-selected=true]{background:linear-gradient(135deg,var(--gold),var(--pink));color:#1a1020;border:0}
+.rk-desc{margin:6px 0 0;color:var(--muted);font-size:13px}
+.rk-head .chips{margin:8px 0 0;align-items:center}
+.rk-body{padding:6px 18px 24px}
+.rk-podium{display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:10px;align-items:end;margin:8px 0 16px}
+.pod{position:relative;padding:14px 10px 12px;border-radius:18px;background:linear-gradient(170deg,var(--panel2),#0f1328);border:1px solid var(--line);text-align:center;cursor:pointer;overflow:hidden;display:grid;gap:2px;align-content:start;animation:rise .55s cubic-bezier(.2,.8,.2,1) both;animation-delay:var(--d)}
+.pod::before{content:"";position:absolute;inset:0;background:radial-gradient(180px 90px at 50% 0,var(--mc),transparent 70%);opacity:.22;pointer-events:none}
+.pod:hover{transform:translateY(-3px)}
+.pod .rn{font-size:36px;font-weight:800;line-height:1;color:var(--mc)}
+.pod.p1{min-height:200px;padding-top:20px;border-color:var(--mc);box-shadow:0 0 0 1px rgba(255,200,87,.25),0 18px 50px rgba(255,200,87,.2)}
+.pod.p1 .rn{font-size:46px}
+.pod.p2{min-height:168px;--mc:#c9d2f0;border-color:rgba(201,210,240,.5)}
+.pod.p3{min-height:146px;--mc:#d68a5a;border-color:rgba(214,138,90,.55)}
+.pod.p1{--mc:#ffc857}
+.pod .nm{font-weight:700;font-size:15px;line-height:1.2;margin-top:4px}
+.pod .vl{font-size:19px;font-weight:800;color:var(--cyan);font-variant-numeric:tabular-nums}
+.pod.p1 .vl{font-size:23px}
+.pod .sb{font-size:11px;color:var(--muted)}
+.pod .rr{font-size:11px;font-weight:700;color:var(--rc)}
+.inl{display:inline-block;margin-top:4px;font-size:10px;font-weight:700;padding:1px 8px;border-radius:99px;color:var(--green);border:1px solid rgba(94,242,160,.45)}
+.rk-list{display:grid;gap:8px}
+.rk-row{display:grid;grid-template-columns:40px minmax(0,1.2fr) minmax(0,1.5fr) minmax(90px,auto);gap:12px;align-items:center;padding:10px 14px;border-radius:14px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--rc);cursor:pointer;transition:transform .15s,border-color .15s;animation:rise .45s cubic-bezier(.2,.8,.2,1) both;animation-delay:var(--d)}
+.rk-row:hover{transform:translateX(3px);border-color:var(--rc)}
+.rk-n{font-weight:800;font-size:18px;color:var(--muted);text-align:center;font-variant-numeric:tabular-nums}
+.rk-name b{display:block;font-size:15px;line-height:1.2}
+.rk-name small{font-size:11px;color:var(--muted)}
+.rk-bar{height:8px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden}
+.rk-bar i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--rc),var(--violet));transition:width .8s cubic-bezier(.2,.8,.2,1)}
+.rk-val{text-align:right;font-weight:800;font-size:15px;font-variant-numeric:tabular-nums;color:var(--cyan)}
+.noanim .pod,.noanim .rk-row{animation:none}.noanim .rk-bar i{transition:none}
+@keyframes rise{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+@media (max-width:640px){
+  dialog.rk{width:100%;max-width:100%;height:100%;max-height:100%;border-radius:0;margin:0}
+  .rk-podium{grid-template-columns:1fr 1.1fr 1fr;gap:6px}
+  .pod{padding:12px 6px 10px}.pod .nm{font-size:13px}.pod .vl{font-size:15px}.pod.p1 .vl{font-size:18px}.pod .rn{font-size:28px}.pod.p1 .rn{font-size:36px}
+  .rk-row{grid-template-columns:34px minmax(0,1fr) auto;row-gap:6px}
+  .rk-row .rk-bar{grid-column:2/4;grid-row:2}
+}
+.tips{display:grid;gap:10px;margin-bottom:14px}
+.tip{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;padding:12px 14px;border-radius:14px;background:linear-gradient(160deg,rgba(255,200,87,.09),rgba(139,108,255,.07));border:1px solid rgba(255,200,87,.35);border-left:4px solid var(--gold);animation:pop .3s ease-out}
+.tip.air{border-left-color:var(--rare);border-color:rgba(77,163,255,.4)}
+.tip.info{border-left-color:var(--muted);border-color:var(--line);background:var(--panel)}
+.tip-body{flex:1 1 300px;font-size:13px;line-height:1.5}
+.tip-body .tl{display:block;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:2px}
+.tip.air .tl{color:var(--rare)}
+.tip-body b{color:var(--text)}
+.tip-acts{display:flex;flex-wrap:wrap;gap:6px}
+.tip-acts button{min-height:36px;padding:4px 12px;font-size:12px;font-weight:600;border-radius:99px;border-color:rgba(255,200,87,.5)}
+.tip.air .tip-acts button{border-color:rgba(77,163,255,.55)}
+.tip-acts button:hover{background:rgba(255,255,255,.08)}
+.tip-acts .up{color:var(--green)}.tip-acts .dn{color:var(--red)}
+
 /* trait picker */
 .trait-btn{width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left;padding:10px 14px;min-height:54px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
 .trait-btn:hover{border-color:var(--cyan)}
@@ -254,7 +318,7 @@ select{width:100%;background:var(--panel);border:1px solid var(--line);border-ra
 <body>
 <div class="topbar" role="status" aria-label="Live team totals">
   <div class="tb-in">
-    <span class="tb-brand">Snack Defense</span>
+    <div class="tb-left"><span class="tb-brand">Snack Defense</span><button type="button" class="rank-btn" id="btnRank">Rankings</button></div>
     <div class="tb-stats">
       <span>Total team DPS <b id="tbDps">0</b></span>
       <span class="hide-xs">no buffs <b id="tbDpsNo">0</b></span>
@@ -316,6 +380,7 @@ select{width:100%;background:var(--panel);border:1px solid var(--line);border-ra
         </div>
       </div>
     </div>
+    <div class="tips" id="tips" aria-live="polite"></div>
     <div class="team" id="team"></div>
   </section>
 
@@ -334,6 +399,7 @@ select{width:100%;background:var(--panel);border:1px solid var(--line);border-ra
 
 <dialog id="dlg2" aria-label="Team link"><div class="m-in"><h2>Copy your team link</h2><textarea id="linkBox" rows="4" readonly></textarea><button type="button" id="dlg2Close" class="btn-main">Close</button></div></dialog>
 <dialog id="dlg" aria-label="Tower settings"><div class="m-in" id="dlgBody"></div></dialog>
+<dialog id="dlgRank" class="rk" aria-label="Rankings"><div class="rk-head" id="rkHead"></div><div class="rk-body" id="rkBody"></div></dialog>
 <dialog id="dlgTrait" aria-label="Choose a trait"><div class="tp-in" id="tpBody"></div></dialog>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -1098,6 +1164,7 @@ function update(){
   if (activeId && !state.team.some(x => x.id === activeId)) activeId = null;
   setActive(activeId);
   if (modalUpd) modalUpd();
+  renderTips();
   writeHash();
 }
 function switchPlayer(i){
@@ -1192,7 +1259,7 @@ $("#presetName").addEventListener("input", () => { $("#nameErr").hidden = true; 
 $("#vCards").addEventListener("click", () => setView("cards"));
 $("#vTable").addEventListener("click", () => setView("table"));
 document.addEventListener("keydown", e => {
-  if (e.ctrlKey || e.metaKey || e.altKey || dlg2.open || dlgTrait.open) return;
+  if (e.ctrlKey || e.metaKey || e.altKey || dlg2.open || dlgTrait.open || dlgRank.open) return;
   const el = e.target, tag = el.tagName, type = (el.type || "").toLowerCase();
   const typing = tag === "TEXTAREA" || tag === "SELECT" || (tag === "INPUT" && type !== "range" && type !== "checkbox");
   if (typing) return;
@@ -1225,12 +1292,135 @@ document.addEventListener("keydown", e => {
   if (used_) e.preventDefault();
 });
 
-/* ---------- init ---------- */
-renderChips(); renderTiles(); renderPresets();
-const init = /[#&](t[1-4]|team)=/.test(location.hash) ? parse(location.hash.slice(1)) : null;
-if (init) apply(init); else structure();
-})();
-</script>
-<script data-goatcounter="https://fxnncalc.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
-</body>
-</html>
+/* ---------- rankings ---------- */
+const dlgRank = $("#dlgRank");
+const RK_TABS = [
+  ["dps",   "Highest DPS",    "One tower, fully upgraded, no buffs."],
+  ["max",   "Max placed",     "Total DPS with every allowed copy placed, fully upgraded, no buffs."],
+  ["value", "Best value",     "DPS per $1,000 spent on a fully upgraded tower."],
+  ["early", "Early game",     "The most DPS you can buy with a budget. Extra copies and upgrades both count."],
+  ["range", "Most range",     "Longest range of a fully upgraded tower."],
+  ["buff",  "Strongest buff", "Support aura at the top upgrade. Timed buffs show the average of one tower."]
+];
+const rk = { kind:"dps", rar:new Set(), type:new Set(), aa:false, budget:3000, cat:"damage" };
+
+function rankData(){
+  const out = [];
+  for (const t of TOWERS){
+    if (rk.rar.size && !rk.rar.has(t.rarity)) continue;
+    if (rk.kind !== "buff"){
+      if (rk.aa && !t.antiAir) continue;
+      if (rk.type.size){ const g = typeTags(t); if (![...rk.type].some(f => g.has(f))) continue; }
+    }
+    const n = t.upgrades.length, last = t.upgrades[n-1];
+    let e = null;
+    if (rk.kind === "dps" && last.dps > 0){
+      e = { v:last.dps, val:fmt(last.dps) + " DPS", sub:`${money(last.totalSpent)} fully upgraded` };
+    } else if (rk.kind === "max" && last.dps > 0){
+      const v = last.dps * t.maxPlaced;
+      e = { v, val:fmt(v) + " DPS", sub:`${t.maxPlaced}× ${fmt(last.dps)} DPS · ${money(last.totalSpent * t.maxPlaced)}` };
+    } else if (rk.kind === "value" && last.dps > 0){
+      const v = last.dps / (last.totalSpent / 1000);
+      e = { v, val:fmt(v) + " / $1k", sub:`${fmt(last.dps)} DPS for ${money(last.totalSpent)}` };
+    } else if (rk.kind === "early"){
+      let best = null;
+      t.upgrades.forEach((u, i) => { for (let q = 1; q <= t.maxPlaced; q++){
+        if (q * u.totalSpent <= rk.budget && u.dps > 0){ const d = q * u.dps; if (!best || d > best.d) best = { d, q, i, spent:q * u.totalSpent }; }
+      }});
+      if (best) e = { v:best.d, val:fmt(best.d) + " DPS", sub:`${best.q}× at upgrade ${best.i}/${n-1} · ${money(best.spent)}` };
+    } else if (rk.kind === "range" && last.range > 0){
+      e = { v:last.range, val:(Math.round(last.range*10)/10) + " range", sub:atkLabel(t) };
+    } else if (rk.kind === "buff" && AURAS[t.name]){
+      const a = AURAS[t.name].find(x => x.cat === rk.cat);
+      if (a){ const v = auraVal(a, n-1); e = { v, val:"+" + pct(v), sub:`${money(last.totalSpent)} fully upgraded${TIMED_BUFFS.has(t.name) ? " · avg of 1 tower" : ""}` }; }
+    }
+    if (e && e.v > 0) out.push({ t, ...e });
+  }
+  return out.sort((a, b) => b.v - a.v);
+}
+
+function pickChips(opts, cur, cb){
+  return opts.map(([v, l]) => { const b = h("button", { type:"button", class:"chip", "aria-pressed":String(v === cur), text:l }); b.addEventListener("click", () => cb(v)); return b; });
+}
+function renderRankHead(){
+  const desc = RK_TABS.find(x => x[0] === rk.kind)[2];
+  const tabs = h("div", { class:"rk-tabs", role:"tablist" }, RK_TABS.map(([k, l]) => {
+    const b = h("button", { type:"button", role:"tab", class:"rk-tab", "aria-selected":String(rk.kind === k), text:l });
+    b.addEventListener("click", () => { rk.kind = k; renderRankHead(); renderRank(true); dlgRank.scrollTop = 0; });
+    return b;
+  }));
+  const rows = [h("div", { class:"chips" }, RARITIES.map(r => chip(cap(r), rk.rar.has(r), p => { p ? rk.rar.add(r) : rk.rar.delete(r); renderRank(true); })))];
+  if (rk.kind !== "buff") rows.push(h("div", { class:"chips" },
+    TYPES.map(r => chip(r, rk.type.has(r), p => { p ? rk.type.add(r) : rk.type.delete(r); renderRank(true); })),
+    chip("Anti-Air", rk.aa, p => { rk.aa = p; renderRank(true); })));
+  if (rk.kind === "early") rows.push(h("div", { class:"chips" }, h("span", { class:"hint2", text:"Budget" }),
+    pickChips([[1500,"$1,500"],[3000,"$3,000"],[5000,"$5,000"],[10000,"$10,000"]], rk.budget, v => { rk.budget = v; renderRankHead(); renderRank(true); })));
+  if (rk.kind === "buff") rows.push(h("div", { class:"chips" }, h("span", { class:"hint2", text:"Buff type" }),
+    pickChips([["damage","Damage"],["speed","Attack speed"],["range","Range"]], rk.cat, v => { rk.cat = v; renderRankHead(); renderRank(true); })));
+  $("#rkHead").replaceChildren(
+    h("div", { class:"rk-top" }, h("h2", { text:"Rankings" }), h("button", { class:"x", type:"button", "aria-label":"Close", text:"✕", onclick: () => dlgRank.close() })),
+    tabs, h("p", { class:"rk-desc", text:desc }), ...rows);
+}
+function renderRank(animate){
+  const body = $("#rkBody"), data = rankData(), sc = dlgRank.scrollTop;
+  body.classList.toggle("noanim", !animate);
+  if (!data.length){ body.replaceChildren(h("div", { class:"empty", text:"No towers match these filters. Clear a filter to see the ranking." })); return; }
+  const max = data[0].v || 1;
+  const inTeam = id => { const s = state.team.find(x => x.id === id); return s ? h("span", { class:"inl", text:`In loadout ×${s.qty}` }) : null; };
+  const add = e => { addTower(e.t.id); renderRank(false); };
+  const pod = [1, 0, 2].filter(i => data[i]).map(i => {
+    const e = data[i], r = i + 1;
+    return h("div", { class:`pod p${r}`, style:`--rc:var(--${e.t.rarity});--d:${i === 0 ? 0.15 : 0.3}s`, tabindex:"0", role:"button", "aria-label":`${e.t.name}, rank ${r}. Add to loadout`,
+      onclick: () => add(e), onkeydown: ev => { if (ev.key === "Enter") add(e); } },
+      h("div", { class:"rn", text:"#" + r }), h("div", { class:"nm", text:e.t.name }),
+      h("div", { class:"vl", text:e.val }), h("div", { class:"rr", text:cap(e.t.rarity) }), h("div", { class:"sb", text:e.sub }), inTeam(e.t.id));
+  });
+  const rows = data.slice(3).map((e, i) => {
+    const bar = h("i", { "data-w":(e.v / max * 100).toFixed(1) });
+    return h("div", { class:"rk-row", style:`--rc:var(--${e.t.rarity});--d:${Math.min(i, 14) * 0.03}s`, tabindex:"0", role:"button", "aria-label":`${e.t.name}, rank ${i + 4}. Add to loadout`,
+      onclick: () => add(e), onkeydown: ev => { if (ev.key === "Enter") add(e); } },
+      h("div", { class:"rk-n", text:i + 4 }),
+      h("div", { class:"rk-name" }, h("b", { text:e.t.name }), h("small", {}, h("span", { class:"rar", text:cap(e.t.rarity) }), " · " + e.sub), inTeam(e.t.id)),
+      h("div", { class:"rk-bar" }, bar), h("div", { class:"rk-val", text:e.val }));
+  });
+  body.replaceChildren(h("div", { class:"rk-podium" }, pod), h("div", { class:"rk-list" }, rows));
+  dlgRank.scrollTop = sc;
+  const grow = () => body.querySelectorAll(".rk-bar i").forEach(i => { i.style.width = i.dataset.w + "%"; });
+  if (animate) requestAnimationFrame(() => requestAnimationFrame(grow)); else grow();
+}
+$("#btnRank").addEventListener("click", () => { renderRankHead(); renderRank(true); dlgRank.showModal(); dlgRank.scrollTop = 0; });
+dlgRank.addEventListener("click", e => { if (e.target === dlgRank) dlgRank.close(); });
+
+/* ---------- tips ---------- */
+let tipSig = "";
+function tipData(){
+  const team = state.team, rows = lastWith.rows;
+  if (!team.length) return [];
+  const dpsSlots = team.filter(s => rows.get(s.id).dps > 0);
+  if (!dpsSlots.length) return [];
+  const cur = lastWith.total, inTeamIds = new Set(team.map(s => s.id));
+  const full = team.length >= MAX_SLOTS || used() >= LIMITS.maxUnits;
+  const weakest = dpsSlots.reduce((a, b) => rows.get(a.id).dps <= rows.get(b.id).dps ? a : b);
+  const base = full ? weakest : null;
+  const hasAA = team.some(s => byId.get(s.id).antiAir && rows.get(s.id).dps > 0);
+  const hasSup = team.some(s => isSupport(byId.get(s.id)));
+  const sim = cand => {
+    const room = LIMITS.maxUnits - (used() - (base ? base.qty : 0));
+    if (room < 1) return null;
+    const qty = isSupport(cand) && !hasDps(cand) ? 1 : Math.min(cand.maxPlaced, room);
+    const ns = { id:cand.id, qty, up:cand.upgrades.length - 1, lvl:base ? base.lvl : 1, trait:base ? base.trait : 0, boss:false,
+      stars:base ? (base.stars || 0) : 0, jumbo:!!(base && base.jumbo && jumboValid(cand)), shiny:!!(base && base.shiny) };
+    const nt = base ? team.map(s => s === base ? ns : s) : [...team, ns];
+    const r = compute(true, nt);
+    return { team:nt, total:r.total, aa:r.total > 0 ? r.aa / r.total : 0 };
+  };
+  const wName = byId.get(weakest.id).name, wDps = fmt(rows.get(weakest.id).dps);
+  const options = (list, kind) => list.map(c => {
+    const s = sim(c); if (!s) return null;
+    const d = cur > 0 ? s.total / cur - 1 : 0;
+    return { c, s, d, label:`${base ? "Swap" : "Add"} ${c.name} · ${d >= 0 ? "+" : ""}${pct(d)} DPS${kind === "air" ? ` · ${Math.round(s.aa * 100)}% Anti-Air` : ""}`, cls:d >= 0 ? "up" : "dn" };
+  }).filter(Boolean);
+  const tips = [];
+
+  if (!hasSup && (!full || dpsSlots.length >= 2)){
+    const list = options(TOWERS.filter(t
