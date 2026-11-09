@@ -6,6 +6,19 @@
 <title>Snack Defense Team-DPS Calculator</title>
 <meta name="description" content="Build and compare Snack Defense teams: levels, traits, support auras, cost and end DPS in real time.">
 <meta name="theme-color" content="#0b0d17">
+<script>
+(function(){
+  function banner(msg){
+    var b=document.getElementById("sdErr");
+    if(!b){ b=document.createElement("div"); b.id="sdErr";
+      b.style.cssText="position:fixed;left:0;right:0;top:0;z-index:999;background:#ff3d6e;color:#fff;padding:10px 14px;font:600 13px/1.4 system-ui,sans-serif";
+      (document.body||document.documentElement).appendChild(b); }
+    b.textContent=msg;
+  }
+  window.addEventListener("error",function(e){ if(e.message) banner("Script error: "+e.message+(e.lineno?" (line "+e.lineno+")":"")+". Please reload; if it stays, send me this message."); });
+  window.addEventListener("load",function(){ if(!window.__sdReady) banner("The page script did not load completely (file may be cut off). Please upload the whole index.html again."); });
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -215,8 +228,17 @@ select{width:100%;background:var(--panel);border:1px solid var(--line);border-ra
 
 /* rankings + tips */
 .tb-left{display:flex;align-items:center;gap:12px}
-.rank-btn{min-height:34px;padding:4px 14px;font-size:13px;font-weight:700;border-radius:99px;border:1px solid rgba(255,200,87,.55);color:var(--gold);background:rgba(255,200,87,.08)}
-.rank-btn:hover{border-color:var(--gold);background:rgba(255,200,87,.16)}
+.rank-btn{min-height:34px;padding:4px 16px;font-size:13px;font-weight:800;border-radius:99px;border:0;color:#1a1020;background:linear-gradient(135deg,var(--gold),var(--pink));box-shadow:0 4px 18px rgba(255,200,87,.35)}
+.rank-btn:hover{filter:brightness(1.1)}
+header.hero{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.hero-txt{flex:1 1 360px;min-width:0}
+.rank-cta{position:relative;display:grid;gap:0;text-align:left;padding:14px 22px 14px 18px;min-height:64px;border:0;border-radius:18px;color:#1a1020;background:linear-gradient(135deg,var(--gold),var(--pink));box-shadow:0 10px 34px rgba(255,200,87,.35);animation:glow 2.6s ease-in-out infinite}
+.rank-cta:hover{filter:brightness(1.08);transform:translateY(-2px)}
+.rank-cta .rc-t{font-weight:800;font-size:22px;line-height:1.1}
+.rank-cta .rc-s{font-size:12px;font-weight:600;opacity:.8}
+.rank-cta .rc-new{position:absolute;top:-8px;right:-6px;background:#10142b;color:var(--gold);border:1px solid var(--gold);font-size:10px;font-weight:800;letter-spacing:.08em;padding:1px 8px;border-radius:99px}
+@keyframes glow{0%,100%{box-shadow:0 10px 34px rgba(255,200,87,.3)}50%{box-shadow:0 10px 44px rgba(255,95,162,.55)}}
+@media (max-width:640px){.rank-cta{width:100%}}
 dialog.rk{width:min(1000px,96vw);height:min(92vh,900px);max-height:92vh;border-color:rgba(255,200,87,.5);background:radial-gradient(900px 400px at 50% -10%,rgba(139,108,255,.22),transparent 60%),#0e1126;overflow:auto}
 .rk-head{position:sticky;top:0;z-index:5;background:linear-gradient(#0e1126 80%,rgba(14,17,38,0));padding:16px 18px 6px}
 .rk-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
@@ -336,8 +358,11 @@ dialog.rk{width:min(1000px,96vw);height:min(92vh,900px);max-height:92vh;border-c
 <div class="scrim" id="scrim"></div>
 <div class="wrap">
   <header class="hero">
-    <h1>Snack Defense <b>Team-DPS Calculator</b></h1>
-    <p class="sub">Pick up to six towers, set levels and traits, and see your team's end DPS with and without support buffs.</p>
+    <div class="hero-txt">
+      <h1>Snack Defense <b>Team-DPS Calculator</b></h1>
+      <p class="sub">Pick up to six towers, set levels and traits, and see your team's end DPS with and without support buffs.</p>
+    </div>
+    <button type="button" class="rank-cta" id="btnRank2"><span class="rc-new">NEW</span><span class="rc-t">Rankings</span><span class="rc-s">Top towers by DPS, value, range and more</span></button>
   </header>
 
   <section class="dash" aria-label="Team dashboard">
@@ -1164,7 +1189,7 @@ function update(){
   if (activeId && !state.team.some(x => x.id === activeId)) activeId = null;
   setActive(activeId);
   if (modalUpd) modalUpd();
-  renderTips();
+  if (window.SD && window.SD.renderTips) { try { window.SD.renderTips(); } catch(err){ console.error(err); } }
   writeHash();
 }
 function switchPlayer(i){
@@ -1259,7 +1284,7 @@ $("#presetName").addEventListener("input", () => { $("#nameErr").hidden = true; 
 $("#vCards").addEventListener("click", () => setView("cards"));
 $("#vTable").addEventListener("click", () => setView("table"));
 document.addEventListener("keydown", e => {
-  if (e.ctrlKey || e.metaKey || e.altKey || dlg2.open || dlgTrait.open || dlgRank.open) return;
+  if (e.ctrlKey || e.metaKey || e.altKey || dlg2.open || dlgTrait.open || (document.getElementById("dlgRank") || {}).open) return;
   const el = e.target, tag = el.tagName, type = (el.type || "").toLowerCase();
   const typing = tag === "TEXTAREA" || tag === "SELECT" || (tag === "INPUT" && type !== "range" && type !== "checkbox");
   if (typing) return;
@@ -1292,6 +1317,24 @@ document.addEventListener("keydown", e => {
   if (used_) e.preventDefault();
 });
 
+/* ---------- API for the Rankings + Tips script ---------- */
+window.SD = { $, h, cap, fmt, money, pct, chip, state, byId, compute, addTower, structure, toast, typeTags, atkLabel, auraVal,
+  isApplied, isSupport, hasDps, jumboValid, used, MAX_SLOTS, TYPES, last: () => lastWith };
+window.__sdReady = true;
+
+/* ---------- init ---------- */
+renderChips(); renderTiles(); renderPresets();
+const init = /[#&](t[1-4]|team)=/.test(location.hash) ? parse(location.hash.slice(1)) : null;
+if (init) apply(init); else structure();
+})();
+</script>
+<script>
+/* Rankings + Tips. Separate script so a problem here can never break the core calculator. */
+(() => {
+"use strict";
+try {
+const { $, h, cap, fmt, money, pct, chip, state, byId, compute, addTower, structure, toast, typeTags, atkLabel, auraVal,
+  isApplied, isSupport, hasDps, jumboValid, used, MAX_SLOTS, TYPES, last } = window.SD;
 /* ---------- rankings ---------- */
 const dlgRank = $("#dlgRank");
 const RK_TABS = [
@@ -1376,51 +1419,4 @@ function renderRank(animate){
       h("div", { class:"vl", text:e.val }), h("div", { class:"rr", text:cap(e.t.rarity) }), h("div", { class:"sb", text:e.sub }), inTeam(e.t.id));
   });
   const rows = data.slice(3).map((e, i) => {
-    const bar = h("i", { "data-w":(e.v / max * 100).toFixed(1) });
-    return h("div", { class:"rk-row", style:`--rc:var(--${e.t.rarity});--d:${Math.min(i, 14) * 0.03}s`, tabindex:"0", role:"button", "aria-label":`${e.t.name}, rank ${i + 4}. Add to loadout`,
-      onclick: () => add(e), onkeydown: ev => { if (ev.key === "Enter") add(e); } },
-      h("div", { class:"rk-n", text:i + 4 }),
-      h("div", { class:"rk-name" }, h("b", { text:e.t.name }), h("small", {}, h("span", { class:"rar", text:cap(e.t.rarity) }), " · " + e.sub), inTeam(e.t.id)),
-      h("div", { class:"rk-bar" }, bar), h("div", { class:"rk-val", text:e.val }));
-  });
-  body.replaceChildren(h("div", { class:"rk-podium" }, pod), h("div", { class:"rk-list" }, rows));
-  dlgRank.scrollTop = sc;
-  const grow = () => body.querySelectorAll(".rk-bar i").forEach(i => { i.style.width = i.dataset.w + "%"; });
-  if (animate) requestAnimationFrame(() => requestAnimationFrame(grow)); else grow();
-}
-$("#btnRank").addEventListener("click", () => { renderRankHead(); renderRank(true); dlgRank.showModal(); dlgRank.scrollTop = 0; });
-dlgRank.addEventListener("click", e => { if (e.target === dlgRank) dlgRank.close(); });
-
-/* ---------- tips ---------- */
-let tipSig = "";
-function tipData(){
-  const team = state.team, rows = lastWith.rows;
-  if (!team.length) return [];
-  const dpsSlots = team.filter(s => rows.get(s.id).dps > 0);
-  if (!dpsSlots.length) return [];
-  const cur = lastWith.total, inTeamIds = new Set(team.map(s => s.id));
-  const full = team.length >= MAX_SLOTS || used() >= LIMITS.maxUnits;
-  const weakest = dpsSlots.reduce((a, b) => rows.get(a.id).dps <= rows.get(b.id).dps ? a : b);
-  const base = full ? weakest : null;
-  const hasAA = team.some(s => byId.get(s.id).antiAir && rows.get(s.id).dps > 0);
-  const hasSup = team.some(s => isSupport(byId.get(s.id)));
-  const sim = cand => {
-    const room = LIMITS.maxUnits - (used() - (base ? base.qty : 0));
-    if (room < 1) return null;
-    const qty = isSupport(cand) && !hasDps(cand) ? 1 : Math.min(cand.maxPlaced, room);
-    const ns = { id:cand.id, qty, up:cand.upgrades.length - 1, lvl:base ? base.lvl : 1, trait:base ? base.trait : 0, boss:false,
-      stars:base ? (base.stars || 0) : 0, jumbo:!!(base && base.jumbo && jumboValid(cand)), shiny:!!(base && base.shiny) };
-    const nt = base ? team.map(s => s === base ? ns : s) : [...team, ns];
-    const r = compute(true, nt);
-    return { team:nt, total:r.total, aa:r.total > 0 ? r.aa / r.total : 0 };
-  };
-  const wName = byId.get(weakest.id).name, wDps = fmt(rows.get(weakest.id).dps);
-  const options = (list, kind) => list.map(c => {
-    const s = sim(c); if (!s) return null;
-    const d = cur > 0 ? s.total / cur - 1 : 0;
-    return { c, s, d, label:`${base ? "Swap" : "Add"} ${c.name} · ${d >= 0 ? "+" : ""}${pct(d)} DPS${kind === "air" ? ` · ${Math.round(s.aa * 100)}% Anti-Air` : ""}`, cls:d >= 0 ? "up" : "dn" };
-  }).filter(Boolean);
-  const tips = [];
-
-  if (!hasSup && (!full || dpsSlots.length >= 2)){
-    const list = options(TOWERS.filter(t
+  
