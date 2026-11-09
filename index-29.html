@@ -1,0 +1,1447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Snack Defense Team-DPS Calculator</title>
+<meta name="description" content="Build and compare Snack Defense teams: levels, traits, support auras, cost and end DPS in real time.">
+<meta name="theme-color" content="#0b0d17">
+<script>
+(function(){
+  function banner(msg){
+    var b=document.getElementById("sdErr");
+    if(!b){ b=document.createElement("div"); b.id="sdErr";
+      b.style.cssText="position:fixed;left:0;right:0;top:0;z-index:999;background:#ff3d6e;color:#fff;padding:10px 14px;font:600 13px/1.4 system-ui,sans-serif";
+      (document.body||document.documentElement).appendChild(b); }
+    b.textContent=msg;
+  }
+  window.addEventListener("error",function(e){ if(e.message) banner("Script error: "+e.message+(e.lineno?" (line "+e.lineno+")":"")+". Please reload; if it stays, send me this message."); });
+  window.addEventListener("load",function(){ if(!window.__sdReady) banner("The page script did not load completely (file may be cut off). Please upload the whole index.html again."); });
+})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0d17; --panel:#141830; --panel2:#1b2040; --line:#2b3262; --text:#eef0ff; --muted:#9aa2d0;
+  --cyan:#3ee6e0; --violet:#8b6cff; --pink:#ff5fa2; --gold:#ffc857; --green:#5ef2a0; --red:#ff6b6b;
+  --common:#a6adc8; --rare:#4da3ff; --epic:#b377ff; --legendary:#ffc857; --mythic:#ff5fa2; --limited:#3ee6e0; --event:#8cf05a; --secret:#ffffff;
+  --font:"Sora",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font:400 15px/1.5 var(--font);
+  background-image:radial-gradient(900px 500px at 10% -10%,rgba(139,108,255,.25),transparent 60%),radial-gradient(800px 500px at 100% 0,rgba(62,230,224,.15),transparent 60%);
+  background-attachment:fixed;padding-bottom:env(safe-area-inset-bottom)}
+button,select{font:inherit;color:inherit}
+button{cursor:pointer;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px 16px;min-height:42px;transition:transform .15s,border-color .15s,background .15s}
+button:hover{border-color:var(--violet)}
+button:active{transform:scale(.97)}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.btn-main{background:linear-gradient(135deg,var(--violet),var(--pink));border:0;font-weight:700;color:#fff;box-shadow:0 6px 24px rgba(139,108,255,.35)}
+.btn-main:hover{filter:brightness(1.1)}
+.wrap{max-width:1180px;margin:0 auto;padding:10px 16px 40px}
+header.hero{padding:10px 0 18px}
+h1{margin:0;font-weight:800;font-size:clamp(26px,5vw,40px);letter-spacing:-.02em;line-height:1.1}
+h1 b{background:linear-gradient(90deg,var(--cyan),var(--violet),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--muted);margin:6px 0 0;max-width:60ch}
+
+/* top bar */
+.topbar{position:sticky;top:0;z-index:30;background:rgba(11,13,23,.82);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top)}
+.tb-in{max-width:1180px;margin:0 auto;padding:8px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:13px}
+.tb-brand{font-weight:700}
+.tb-stats{display:flex;gap:14px;flex-wrap:wrap;justify-content:flex-end;color:var(--muted)}
+.tb-stats b{color:var(--text);font-variant-numeric:tabular-nums}
+.tb-stats .cost b{color:var(--gold)}
+@media (max-width:520px){.hide-xs{display:none}.tb-brand{display:none}.tb-stats{gap:12px}}
+.ptabs{max-width:1180px;margin:0 auto;padding:0 16px 8px;display:flex;gap:6px}
+.ptab{flex:1;display:grid;gap:0;padding:5px 6px;min-height:46px;border-radius:12px;text-align:center;line-height:1.2}
+.ptab .pn{font-weight:700;font-size:13px}
+.ptab .pd{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ptab[aria-selected=true]{background:linear-gradient(135deg,var(--violet),var(--pink));border-color:transparent;color:#fff}
+.ptab[aria-selected=true] .pd{color:rgba(255,255,255,.85)}
+.stars{display:flex;gap:6px}
+.star{font-size:22px;padding:0;width:48px;min-height:44px;background:none;color:var(--muted)}
+.star.on{color:var(--gold);border-color:var(--gold);background:rgba(255,200,87,.08)}
+.hint2{font-size:12px;color:var(--muted);font-weight:400}
+.field .lab .hint2{margin-left:8px}
+.bump{animation:bump .35s ease-out}
+@keyframes bump{from{color:var(--cyan);transform:scale(1.12)}to{transform:none}}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.seg button{border:0;border-radius:0;min-height:40px;padding:6px 12px;font-size:13px;background:transparent}
+.seg button[aria-pressed=true]{background:var(--violet);color:#fff;font-weight:600}
+.keys{font-size:12px;color:var(--muted);margin:6px 0 0}
+.keys kbd{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:0 6px;font:inherit;font-size:11px}
+.card.active{border-color:var(--cyan);box-shadow:0 0 0 1px var(--cyan),0 10px 30px rgba(62,230,224,.15)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+.ttable{width:100%;border-collapse:collapse;font-size:13px;min-width:560px}
+.ttable th{text-align:left;font-weight:600;font-size:11px;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.ttable td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle;font-variant-numeric:tabular-nums}
+.ttable tr:last-child td{border-bottom:0}
+.trow{cursor:pointer;transition:background .15s}
+.trow:hover{background:rgba(139,108,255,.08)}
+.trow.active{background:rgba(62,230,224,.09);box-shadow:inset 3px 0 0 var(--cyan)}
+.trow .cname{font-size:14px}
+.trow .stepper button{width:32px;min-height:32px}
+.trow .dpsc{font-weight:800;color:var(--cyan)}
+.trow .linkbtn{min-height:30px;padding:2px 6px}
+@media (max-width:640px){.hide-sm{display:none}}
+
+/* dashboard */
+.dash{display:grid;gap:14px;grid-template-columns:1.6fr 1fr 1fr 1fr;margin-bottom:22px}
+.tile{background:linear-gradient(160deg,var(--panel),#101429);border:1px solid var(--line);border-radius:18px;padding:16px}
+.tile h3{margin:0 0 4px;font-size:13px;font-weight:600;color:var(--muted)}
+.big{font-weight:800;font-size:clamp(28px,4.5vw,44px);line-height:1.05;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.stat{font-weight:700;font-size:24px;font-variant-numeric:tabular-nums}
+.small{color:var(--muted);font-size:12px}
+.compare{container-type:inline-size;position:relative;overflow:hidden;border-color:rgba(139,108,255,.55);box-shadow:0 0 0 1px rgba(139,108,255,.15),0 10px 40px rgba(139,108,255,.18)}
+.cmp{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:6px}
+.compare .big{font-size:clamp(22px,6.5cqw,44px);overflow-wrap:anywhere}
+@container (max-width:470px){.cmp{grid-template-columns:1fr}.compare .big{font-size:clamp(26px,11cqw,44px)}}
+.tile{min-width:0}.stat{overflow-wrap:anywhere}
+.cmp .lbl{font-size:12px;color:var(--muted)}
+.cmp .with .big{color:var(--cyan)}
+.cmp .without .big{color:var(--text);opacity:.85}
+.bars{margin-top:12px;display:grid;gap:6px}
+.bar{height:8px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden}
+.bar i{display:block;height:100%;width:0;border-radius:99px;transition:width .45s cubic-bezier(.2,.8,.2,1)}
+.bar.w i{background:linear-gradient(90deg,var(--cyan),var(--violet))}
+.bar.o i{background:#6b739f}
+.gain{display:inline-block;margin-top:10px;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700;background:rgba(94,242,160,.12);color:var(--green);border:1px solid rgba(94,242,160,.35)}
+.gain.none{background:rgba(255,255,255,.05);color:var(--muted);border-color:var(--line)}
+.bossrow{display:flex;align-items:center;gap:8px;font-size:14px}
+.bossrow input{accent-color:var(--gold);width:20px;height:20px}
+.toggle{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:var(--muted);cursor:pointer}
+.toggle input,.bossrow input{accent-color:var(--violet);width:18px;height:18px}
+
+#btnClear[data-arm="1"]{background:linear-gradient(135deg,#ff6b6b,#ff3d6e);box-shadow:0 6px 24px rgba(255,107,107,.4)}
+
+/* sections */
+.sec-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:0 0 12px}
+h2{margin:0;font-size:20px;font-weight:700}
+.count{color:var(--muted);font-size:13px;margin-left:8px;font-weight:400}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.linkbtn{background:none;border:0;color:var(--muted);text-decoration:underline;padding:6px 8px;min-height:36px}
+.linkbtn:hover,.linkbtn[data-arm="1"]{color:var(--red)}
+.linkbtn[data-arm="1"]{font-weight:700}
+dialog textarea{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;color:var(--text);font:12px/1.4 ui-monospace,monospace;margin:8px 0 12px}
+
+/* picker dropdown */
+.picker{position:relative}
+.scrim{position:fixed;inset:0;background:rgba(5,6,14,.6);backdrop-filter:blur(2px);opacity:0;visibility:hidden;transition:opacity .28s ease,visibility 0s linear .28s;z-index:55}
+.scrim.open{opacity:1;visibility:visible;transition:opacity .28s ease,visibility 0s}
+.panel{position:fixed;top:0;right:0;bottom:0;width:min(580px,100vw);overflow:auto;overscroll-behavior:contain;background:#10142b;border-left:1px solid var(--violet);padding:0 16px calc(16px + env(safe-area-inset-bottom));z-index:60;box-shadow:-24px 0 80px rgba(0,0,0,.6);
+  transform:translateX(100%);visibility:hidden;transition:transform .3s cubic-bezier(.2,.8,.2,1),visibility 0s linear .3s}
+.panel.open{transform:none;visibility:visible;transition:transform .3s cubic-bezier(.2,.8,.2,1),visibility 0s}
+.phead{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;align-items:center;gap:8px;background:#10142b;padding:14px 0 10px;margin-bottom:4px}
+.phead h2{font-size:18px}
+.phead button{width:44px;padding:0}
+.panel input[type=search]{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 14px;color:var(--text);font:inherit;min-height:44px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0}
+.chip{min-height:32px;padding:4px 12px;font-size:12px;border-radius:99px}
+.chip[aria-pressed=true]{background:var(--violet);border-color:var(--violet);color:#fff;font-weight:600}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:14px}
+.pt{position:relative;text-align:left;display:grid;gap:2px;padding:10px;border-radius:14px;background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--rc)}
+.pt:disabled{opacity:.4;cursor:not-allowed}
+.pt:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.pt .n{font-weight:700;font-size:14px;line-height:1.2}
+.pt .m{font-size:11px;color:var(--muted)}
+.pinfo{font-size:12px;color:var(--muted);margin:10px 2px 0}
+.pt .c{position:absolute;top:8px;right:8px;background:var(--rc);color:#10142b;border-radius:99px;font-size:11px;font-weight:800;padding:0 7px}
+.empty{color:var(--muted);text-align:center;padding:26px 10px;border:1px dashed var(--line);border-radius:16px;grid-column:1/-1}
+.sheet-close{display:none!important}
+
+/* team cards */
+.team{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(290px,1fr))}
+.card{position:relative;background:linear-gradient(160deg,var(--panel),#101429);border:1px solid var(--line);border-radius:18px;padding:14px;cursor:pointer;display:grid;gap:10px;overflow:hidden;animation:pop .25s ease-out;transition:transform .18s,box-shadow .18s,border-color .18s}
+.card::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:var(--rc)}
+.card:hover{transform:translateY(-3px);border-color:var(--rc);box-shadow:0 14px 40px rgba(0,0,0,.45)}
+.card-top{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
+.cname{font-weight:700;font-size:17px;line-height:1.2}
+.rar{color:var(--rc);font-weight:600}
+.cmeta{font-size:12px;color:var(--muted)}
+.cdps{text-align:right;font-weight:800;font-size:20px;font-variant-numeric:tabular-nums}
+.cdps small{display:block;font-weight:400;font-size:11px;color:var(--muted)}
+.tags{display:flex;flex-wrap:wrap;gap:5px;min-height:22px}
+.tag{font-size:11px;padding:2px 9px;border-radius:99px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.tag.buff{color:var(--green);border-color:rgba(94,242,160,.45);background:rgba(94,242,160,.07)}
+.tag.warn{color:var(--gold);border-color:rgba(255,200,87,.45)}
+.tag.aa{color:var(--rare);border-color:rgba(77,163,255,.5)}
+.tag.tr{color:var(--gold);border-color:rgba(255,200,87,.45)}
+.card-foot{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.hint{font-size:12px;color:var(--muted)}
+.stepper{display:inline-flex;align-items:center;gap:2px;background:rgba(255,255,255,.04);border-radius:12px;border:1px solid var(--line)}
+.stepper button{border:0;background:none;width:40px;min-height:40px;padding:0;font-size:18px;border-radius:12px}
+.stepper output{min-width:26px;text-align:center;font-weight:800}
+.noteam{grid-column:1/-1;text-align:center;padding:44px 16px;border:1px dashed var(--line);border-radius:18px;color:var(--muted)}
+
+/* presets */
+.presets{margin-top:30px}
+.saverow{display:flex;gap:8px;flex-wrap:wrap}
+.saverow input{flex:1;min-width:180px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px;color:var(--text);font:inherit;min-height:42px}
+.nameerr{margin-top:8px;color:var(--red);font-size:13px;font-weight:600}
+#presetName.bad{border-color:var(--red)}
+.plist{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.plist li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 8px 8px 14px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.plist .b{display:flex;gap:6px}
+.plist button{min-height:34px;padding:4px 12px;font-size:13px}
+
+/* modal */
+dialog{padding:0;border:1px solid var(--violet);border-radius:22px;background:#10142b;color:var(--text);width:min(560px,94vw);max-height:92vh;box-shadow:0 30px 100px rgba(0,0,0,.7)}
+dialog[open]{animation:pop .2s ease-out}
+dialog::backdrop{background:rgba(5,6,14,.75);backdrop-filter:blur(4px)}
+.m-in{padding:20px;display:grid;gap:16px}
+.m-head{display:flex;gap:12px}
+.m-head{justify-content:space-between;align-items:flex-start}
+.m-head .x{width:42px;padding:0;flex:none}
+.field label,.field .lab{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:4px}
+.field label b,.field .lab b{color:var(--text)}
+input[type=range]{width:100%;height:40px;background:transparent;accent-color:var(--violet);-webkit-appearance:none;appearance:none}
+input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:99px;background:linear-gradient(90deg,var(--violet),var(--cyan))}
+input[type=range]::-moz-range-track{height:8px;border-radius:99px;background:linear-gradient(90deg,var(--violet),var(--cyan))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;margin-top:-8px;border-radius:50%;background:#fff;border:3px solid var(--violet);box-shadow:0 2px 10px rgba(0,0,0,.5)}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid var(--violet)}
+select{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 12px;min-height:44px}
+.trdesc{font-size:13px;color:var(--gold);margin-top:6px;min-height:20px}
+.mstats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.mstats div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.mstats span{display:block;font-size:11px;color:var(--muted)}
+.mstats b{font-size:17px;font-variant-numeric:tabular-nums}
+.mfoot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center}
+.danger{color:var(--red)}
+.brk{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}
+.brk h4{margin:0 0 4px;font-size:14px}
+.brk p{margin:0 0 8px;font-size:12px;color:var(--muted)}
+.brk table{width:100%;border-collapse:collapse;font-size:13px}
+.brk th{font-weight:600;font-size:11px;color:var(--muted);text-align:left;padding:4px 6px 4px 0}
+.brk td{padding:6px 6px 6px 0;border-top:1px solid var(--line);vertical-align:top;font-variant-numeric:tabular-nums}
+.bossrow[hidden],.field[hidden],.tile[hidden]{display:none}
+.ok{color:var(--green)}.no{color:var(--gold)}
+.rcv{font-size:13px;color:var(--green)}
+.sub2{color:var(--muted);font-size:13px;margin:0}
+
+.foot{color:var(--muted);font-size:12px;margin-top:34px;max-width:80ch}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translate(-50%,20px);background:#fff;color:#10142b;padding:11px 18px;border-radius:12px;font-weight:600;opacity:0;pointer-events:none;transition:.2s;z-index:100;max-width:92vw}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* rankings + tips */
+.tb-left{display:flex;align-items:center;gap:12px}
+header.hero{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.hero-txt{flex:1 1 360px;min-width:0}
+.rank-cta{position:relative;display:grid;gap:0;text-align:left;padding:14px 22px 14px 18px;min-height:64px;border:0;border-radius:18px;color:#1a1020;background:linear-gradient(135deg,var(--gold),var(--pink));box-shadow:0 10px 34px rgba(255,200,87,.35);animation:glow 2.6s ease-in-out infinite}
+.rank-cta:hover{filter:brightness(1.08);transform:translateY(-2px)}
+.rank-cta .rc-t{font-weight:800;font-size:22px;line-height:1.1}
+.rank-cta .rc-s{font-size:12px;font-weight:600;opacity:.8}
+.rank-cta .rc-new{position:absolute;top:-8px;right:-6px;background:#10142b;color:var(--gold);border:1px solid var(--gold);font-size:10px;font-weight:800;letter-spacing:.08em;padding:1px 8px;border-radius:99px}
+@keyframes glow{0%,100%{box-shadow:0 10px 34px rgba(255,200,87,.3)}50%{box-shadow:0 10px 44px rgba(255,95,162,.55)}}
+@media (max-width:640px){.rank-cta{width:100%}}
+dialog.rk{width:min(1000px,96vw);height:min(92vh,900px);max-height:92vh;border-color:rgba(255,200,87,.5);background:radial-gradient(900px 400px at 50% -10%,rgba(139,108,255,.22),transparent 60%),#0e1126;overflow:auto}
+.rk-head{position:sticky;top:0;z-index:5;background:linear-gradient(#0e1126 80%,rgba(14,17,38,0));padding:16px 18px 6px}
+.rk-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.rk-top h2{font-size:24px;background:linear-gradient(90deg,var(--gold),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
+.rk-top .x{width:42px;padding:0}
+.rk-tabs{display:flex;gap:6px;overflow-x:auto;padding:10px 0 4px;scrollbar-width:none}
+.rk-tabs::-webkit-scrollbar{display:none}
+.rk-tab{flex:none;min-height:38px;padding:6px 14px;border-radius:99px;font-size:13px;font-weight:600;white-space:nowrap}
+.rk-tab[aria-selected=true]{background:linear-gradient(135deg,var(--gold),var(--pink));color:#1a1020;border:0}
+.rk-desc{margin:6px 0 0;color:var(--muted);font-size:13px}
+.rk-head .chips{margin:8px 0 0;align-items:center}
+.rk-body{padding:6px 18px 24px}
+.rk-podium{display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:10px;align-items:end;margin:8px 0 16px}
+.pod{position:relative;padding:14px 10px 12px;border-radius:18px;background:linear-gradient(170deg,var(--panel2),#0f1328);border:1px solid var(--line);text-align:center;cursor:pointer;overflow:hidden;display:grid;gap:2px;align-content:start;animation:rise .55s cubic-bezier(.2,.8,.2,1) both;animation-delay:var(--d)}
+.pod::before{content:"";position:absolute;inset:0;background:radial-gradient(180px 90px at 50% 0,var(--mc),transparent 70%);opacity:.22;pointer-events:none}
+.pod:hover{transform:translateY(-3px)}
+.pod .rn{font-size:36px;font-weight:800;line-height:1;color:var(--mc)}
+.pod.p1{min-height:200px;padding-top:20px;border-color:var(--mc);box-shadow:0 0 0 1px rgba(255,200,87,.25),0 18px 50px rgba(255,200,87,.2)}
+.pod.p1 .rn{font-size:46px}
+.pod.p2{min-height:168px;--mc:#c9d2f0;border-color:rgba(201,210,240,.5)}
+.pod.p3{min-height:146px;--mc:#d68a5a;border-color:rgba(214,138,90,.55)}
+.pod.p1{--mc:#ffc857}
+.pod .nm{font-weight:700;font-size:15px;line-height:1.2;margin-top:4px}
+.pod .vl{font-size:19px;font-weight:800;color:var(--cyan);font-variant-numeric:tabular-nums}
+.pod.p1 .vl{font-size:23px}
+.pod .sb{font-size:11px;color:var(--muted)}
+.pod .rr{font-size:11px;font-weight:700;color:var(--rc)}
+.inl{display:inline-block;margin-top:4px;font-size:10px;font-weight:700;padding:1px 8px;border-radius:99px;color:var(--green);border:1px solid rgba(94,242,160,.45)}
+.rk-list{display:grid;gap:8px}
+.rk-row{display:grid;grid-template-columns:40px minmax(0,1.2fr) minmax(0,1.5fr) minmax(90px,auto);gap:12px;align-items:center;padding:10px 14px;border-radius:14px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--rc);cursor:pointer;transition:transform .15s,border-color .15s;animation:rise .45s cubic-bezier(.2,.8,.2,1) both;animation-delay:var(--d)}
+.rk-row:hover{transform:translateX(3px);border-color:var(--rc)}
+.rk-n{font-weight:800;font-size:18px;color:var(--muted);text-align:center;font-variant-numeric:tabular-nums}
+.rk-name b{display:block;font-size:15px;line-height:1.2}
+.rk-name small{font-size:11px;color:var(--muted)}
+.rk-bar{height:8px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden}
+.rk-bar i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--rc),var(--violet));transition:width .8s cubic-bezier(.2,.8,.2,1)}
+.rk-val{text-align:right;font-weight:800;font-size:15px;font-variant-numeric:tabular-nums;color:var(--cyan)}
+.noanim .pod,.noanim .rk-row{animation:none}.noanim .rk-bar i{transition:none}
+@keyframes rise{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+@media (max-width:640px){
+  dialog.rk{width:100%;max-width:100%;height:100%;max-height:100%;border-radius:0;margin:0}
+  .rk-podium{grid-template-columns:1fr 1.1fr 1fr;gap:6px}
+  .pod{padding:12px 6px 10px}.pod .nm{font-size:13px}.pod .vl{font-size:15px}.pod.p1 .vl{font-size:18px}.pod .rn{font-size:28px}.pod.p1 .rn{font-size:36px}
+  .rk-row{grid-template-columns:34px minmax(0,1fr) auto;row-gap:6px}
+  .rk-row .rk-bar{grid-column:2/4;grid-row:2}
+}
+.tips{display:grid;gap:10px;margin-bottom:14px}
+.tip{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;padding:12px 14px;border-radius:14px;background:linear-gradient(160deg,rgba(255,200,87,.09),rgba(139,108,255,.07));border:1px solid rgba(255,200,87,.35);border-left:4px solid var(--gold);animation:pop .3s ease-out}
+.tip.air{border-left-color:var(--rare);border-color:rgba(77,163,255,.4)}
+.tip.info{border-left-color:var(--muted);border-color:var(--line);background:var(--panel)}
+.tip-body{flex:1 1 300px;font-size:13px;line-height:1.5}
+.tip-body .tl{display:block;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:2px}
+.tip.air .tl{color:var(--rare)}
+.tip-body b{color:var(--text)}
+.tip-acts{display:flex;flex-wrap:wrap;gap:6px}
+.tip-acts button{min-height:36px;padding:4px 12px;font-size:12px;font-weight:600;border-radius:99px;border-color:rgba(255,200,87,.5)}
+.tip.air .tip-acts button{border-color:rgba(77,163,255,.55)}
+.tip-acts button:hover{background:rgba(255,255,255,.08)}
+.tip-acts .up{color:var(--green)}.tip-acts .dn{color:var(--red)}
+
+/* trait picker */
+.trait-btn{width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left;padding:10px 14px;min-height:54px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.trait-btn:hover{border-color:var(--cyan)}
+.trait-btn .tmain{display:grid;gap:0}
+.trait-btn .tmain b{font-size:15px;color:var(--text)}
+.trait-btn .tsub{font-size:12px;color:var(--muted)}
+.trait-btn .tchev{color:var(--cyan);font-size:18px}
+#dlgTrait{width:min(640px,94vw)}
+.tp-in{padding:16px;display:grid;gap:12px}
+.tp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.tp-head h2{font-size:20px}
+.tp-head p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.tp-head .x{width:42px;padding:0;flex:none}
+.tp-list{display:grid;gap:8px}
+.tp-item{width:100%;display:grid;gap:6px;text-align:left;padding:12px 14px;border-radius:14px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--tc)}
+.tp-item:hover{border-color:var(--tc)}
+.tp-item[aria-pressed=true]{border-color:var(--cyan);border-left-color:var(--cyan);background:rgba(62,230,224,.08);box-shadow:0 0 0 1px var(--cyan)}
+.tp-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tp-name{font-weight:700;font-size:16px;color:var(--tc)}
+.tp-on{font-size:12px;font-weight:700;color:var(--cyan)}
+.tp-desc{font-size:13px;color:var(--muted);line-height:1.4}
+.tp-chips{display:flex;flex-wrap:wrap;gap:5px}
+.tp-chip{font-size:11px;padding:2px 9px;border-radius:99px;border:1px solid var(--line);color:var(--text);font-variant-numeric:tabular-nums}
+.tp-chip.pos{color:var(--green);border-color:rgba(94,242,160,.45);background:rgba(94,242,160,.07)}
+.tp-chip.neg{color:var(--red);border-color:rgba(255,107,107,.45);background:rgba(255,107,107,.07)}
+.tp-chip.sp{color:var(--gold);border-color:rgba(255,200,87,.45);background:rgba(255,200,87,.07)}
+@media (max-width:640px){#dlgTrait{margin:auto auto 0;width:100%;max-width:100%;max-height:90vh;border-radius:22px 22px 0 0}}
+
+@media (max-width:900px){.dash{grid-template-columns:1fr 1fr}.compare{grid-column:1/-1}}
+@media (max-width:640px){
+  .panel{left:0;right:0;top:auto;bottom:0;width:100%;max-height:86vh;border-left:0;border-top:1px solid var(--violet);border-radius:22px 22px 0 0;transform:translateY(100%)}
+  .panel.open{transform:none}
+  .picker{width:100%}.picker>.btn-main{width:100%}
+  .tiles{grid-template-columns:repeat(2,1fr)}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="topbar" role="status" aria-label="Live team totals">
+  <div class="tb-in">
+    <div class="tb-left"><span class="tb-brand">Snack Defense</span></div>
+    <div class="tb-stats">
+      <span>Total team DPS <b id="tbDps">0</b></span>
+      <span class="hide-xs">no buffs <b id="tbDpsNo">0</b></span>
+      <span class="cost">Total cost <b id="tbCost">$0</b></span>
+      <span class="hide-xs"><b id="tbUnits">0</b> placed</span>
+    </div>
+  </div>
+  <div class="ptabs" role="tablist" aria-label="Player loadouts">
+    <button class="ptab" role="tab" type="button" id="ptab0" aria-selected="true"><span class="pn">Player 1</span><span class="pd" id="ptd0">0</span></button>
+    <button class="ptab" role="tab" type="button" id="ptab1" aria-selected="false"><span class="pn">Player 2</span><span class="pd" id="ptd1">0</span></button>
+    <button class="ptab" role="tab" type="button" id="ptab2" aria-selected="false"><span class="pn">Player 3</span><span class="pd" id="ptd2">0</span></button>
+    <button class="ptab" role="tab" type="button" id="ptab3" aria-selected="false"><span class="pn">Player 4</span><span class="pd" id="ptd3">0</span></button>
+  </div>
+</div>
+<div class="scrim" id="scrim"></div>
+<div class="wrap">
+  <header class="hero">
+    <div class="hero-txt">
+      <h1>Snack Defense <b>Team-DPS Calculator</b></h1>
+      <p class="sub">Pick up to six towers, set levels and traits, and see your team's end DPS with and without support buffs.</p>
+    </div>
+    <button type="button" class="rank-cta" id="btnRank2"><span class="rc-new">NEW</span><span class="rc-t">Rankings</span><span class="rc-s">Top towers by DPS, value, range and more</span></button>
+  </header>
+
+  <section class="dash" aria-label="Team dashboard">
+    <div class="tile compare">
+      <h3 id="cmpTitle">Loadout DPS</h3>
+      <div class="cmp">
+        <div class="with"><div class="lbl">With Buff</div><div class="big" id="dpsWith">0</div></div>
+        <div class="without"><div class="lbl">Without Buff</div><div class="big" id="dpsWithout">0</div></div>
+      </div>
+      <div class="bars">
+        <div class="bar w"><i id="barW"></i></div>
+        <div class="bar o"><i id="barO"></i></div>
+      </div>
+      <span class="gain none" id="gain">No support in team</span>
+    </div>
+    <div class="tile"><h3>Spent</h3><div class="stat" id="stCost">$0</div><div class="small"><span id="stUnits">0</span> / 20 placed · <span id="stSlots">0</span> / 6 slots</div><div class="small" id="stInc"></div></div>
+    <div class="tile"><h3>DPS per $1,000</h3><div class="stat" id="stEff">0</div><div class="small">with buffs</div></div>
+    <div class="tile"><h3>Anti-Air coverage</h3><div class="stat" id="stAA">0%</div><div class="small">share of team DPS</div></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div><h2><span id="teamTitle">Player 1 loadout</span> <span class="count" id="teamCount"></span></h2><p class="sub2">Tap a tower to customize it. Each player: up to 6 different towers, 20 placed.</p>
+        <p class="keys"><kbd>1</kbd>–<kbd>6</kbd> select · <kbd>+</kbd> <kbd>−</kbd> placed · <kbd>]</kbd> <kbd>[</kbd> level · <kbd>↑</kbd> <kbd>↓</kbd> upgrade · <kbd>S</kbd> stars · <kbd>Enter</kbd> customize · <kbd>/</kbd> add tower</p></div>
+      <div class="actions">
+        <div class="seg" role="group" aria-label="Team view"><button type="button" id="vCards" aria-pressed="true">Cards</button><button type="button" id="vTable" aria-pressed="false">Table</button></div>
+        <button class="btn-main" id="btnShare" type="button">Copy team link</button>
+        <button class="btn-main" id="btnClear" type="button">Clear loadout</button>
+        <div class="picker">
+          <button class="btn-main" id="btnPick" type="button" aria-haspopup="true" aria-expanded="false">+ Add tower</button>
+          <div class="panel" id="panel" role="dialog" aria-label="Choose a tower">
+            <div class="phead"><h2>Add tower</h2><button type="button" id="btnClosePanel" aria-label="Close">✕</button></div>
+            <input type="search" id="search" placeholder="Search towers" aria-label="Search towers" autocomplete="off">
+            <div class="chips" id="rarChips" aria-label="Rarity"></div>
+            <div class="chips" id="typeChips" aria-label="Attack type"></div>
+            <div class="pinfo" id="pinfo"></div>
+            <div class="tiles" id="tiles"></div>
+            <button class="sheet-close" id="btnDone" type="button">Done</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tips" id="tips" aria-live="polite"></div>
+    <div class="team" id="team"></div>
+  </section>
+
+  <section class="presets">
+    <div class="sec-head"><h2>Saved builds</h2></div>
+    <div class="saverow">
+      <input type="text" id="presetName" maxlength="40" placeholder="Name this build, e.g. Boss Killer Meta" aria-label="Build name">
+      <button type="button" id="btnSave">Save build</button>
+    </div>
+    <div class="nameerr" id="nameErr" role="alert" hidden></div>
+    <ul class="plist" id="plist"></ul>
+  </section>
+
+  <p class="foot">Fan-made tool, not affiliated with the game's developers. DPS = base DPS at the chosen upgrade × placed × (1 + 0.8% per level above 1) × (1 + 5% per star) × (Shiny: +10% attack speed) × trait multipliers × self-buff uptime (e.g. Frankenstein Apple overcharge) × strongest damage aura × strongest speed aura. The game data has no support buff numbers, so Support buff values come from the game tables; editable in the <code>AURAS</code> table in this file. Timed buffs (Hot Chili, Frankenstein Apple) show the average of a single tower; staggering several of them raises the real uptime. Average = Buff × (Duration / Cooldown) + 1 × (1 − Duration / Cooldown). Poison damage assumes one tick per second.</p>
+</div>
+
+<dialog id="dlg2" aria-label="Team link"><div class="m-in"><h2>Copy your team link</h2><textarea id="linkBox" rows="4" readonly></textarea><button type="button" id="dlg2Close" class="btn-main">Close</button></div></dialog>
+<dialog id="dlg" aria-label="Tower settings"><div class="m-in" id="dlgBody"></div></dialog>
+<dialog id="dlgRank" class="rk" aria-label="Rankings"><div class="rk-head" id="rkHead"></div><div class="rk-body" id="rkBody"></div></dialog>
+<dialog id="dlgTrait" aria-label="Choose a trait"><div class="tp-in" id="tpBody"></div></dialog>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const ROWS = {
+  bacon: [[200,12,387,2,193.5],[150,12,590,2,295],[325,13,1094,2,547],[650,13,2003,1.8,1113],[1300,14,4493,1.8,2496],[2600,14,9474,1.8,5263],[5200,14,19436,1.8,10798]],
+  cookie: [[250,14,449,2.5,179.6],[200,14,702,2.5,280.8],[400,15,1044,2.5,417.6],[800,15,1849,2.2,840.5],[1600,16,3485,2.2,1584],[3200,16,7330,2.2,3332],[6400,16,15020,2.2,6827]],
+  donut: [[250,12,314,3.5,89.7],[200,12,468,3.5,133.7],[400,14,759,3.5,216.9],[800,14,1320,3.2,412.5],[1600,16,2716,3.2,848.8],[3200,16,5714,3.2,1786],[6400,16,12000,3.2,3750]],
+  grapejuice: [[200,26,20,0.5,40],[160,26,31,0.5,62],[320,26,51,0.45,113.3],[640,30,103,0.45,228.9],[1280,30,204,0.4,510],[2560,30,429,0.4,1073],[5120,30,879,0.4,2198]],
+  melon: [[150,25,48,2,24],[120,25,76,2,38],[240,28,129,2,64.5],[480,28,234,1.8,130],[960,32,482,1.8,267.8],[1920,40,892,1.8,495.6],[4000,40,1875,1.8,1042]],
+  mustard: [[250,38,92,2.4,38.3],[200,38,141,2.4,58.8],[400,41,254,2.4,105.8],[800,41,468,2.2,212.7],[1600,46,1040,2.2,472.7],[3200,46,2227,2.2,1012],[6400,46,4601,2.2,2091]],
+  baguette: [[650,13,460,1.5,306.7],[520,13,748,1.5,498.7],[1040,14,1238,1.5,825.3],[2080,14,2336,1.4,1669],[4160,15,4636,1.4,3311],[8320,15,8962,1.3,6894]],
+  blueberrymuffin: [[350,9,280,1.8,155.6],[275,9,460,1.8,255.6],[550,10,770,1.8,427.8],[1100,10,1400,1.8,777.8],[2200,11,2800,1.8,1556],[4400,11,5950,1.8,3306]],
+  boba: [[475,60,81,2,40.5],[370,65,131,2,65.5],[750,65,221,1.8,122.8],[1490,72,450,1.8,250],[2980,78,888,1.6,555],[6080,78,1883,1.6,1177]],
+  candybar: [[600,16,235,2.5,94],[640,16,385,2.5,154],[1280,18,583,2.5,233.2],[2560,18,1046,2.2,475.5],[5120,20,1948,2.2,885.5],[10240,20,4092,2.2,1860]],
+  carrot: [[500,46,93,1.15,80.9],[400,46,147,1.15,127.8],[800,49,279,1.15,242.6],[1600,49,491,1,491],[3200,52,1070,1,1070],[6400,52,2216,1,2216]],
+  cherries: [[250,10,0,0,0]],
+  coffee: [[200,8,0,0,0],[250,8.5,0,0,0],[300,9,0,0,0],[450,9.5,0,0,0],[700,10,0,0,0]],
+  fry: [[800,12,554,1,554],[640,12,910,1,910],[1280,12,1537,0.9,1708],[2560,14,2433,0.9,2703],[5120,14,4808,0.8,6010],[10240,14,10098,0.8,12623]],
+  jam: [[450,45,55,1.4,39.3],[350,45,94,1.4,67.1],[700,45,165,1.4,117.9],[1400,45,308,1.2,256.7],[2800,45,655,1.2,545.8],[5600,45,1419,1.2,1183]],
+  pancakes: [[400,14,830,2.5,332],[300,14,1390,2.5,556],[600,15,2410,2.5,964],[1200,15,4440,2.5,1776],[2400,16,8780,2.3,3817],[4800,16,18500,2.3,8043]],
+  pumpkinspice: [[175,25,45,1,45],[140,25,72,1,72],[280,27,122,1,122],[560,27,222,0.9,246.7],[1120,29,457,0.9,507.8],[2240,31,846,0.9,940],[4000,31,1777,0.9,1974]],
+  syrup: [[300,20,5,3,1.7],[225,20,8,3,2.7],[450,22,12,3,4],[900,22,18,3,6],[1800,24,28,2.6,10.8],[4000,24,40,2.6,15.4]],
+  toaster: [[250,5,0,5,0],[350,5,0,5,0],[600,5,0,4.5,0],[1100,5,0,4.5,0],[2100,5,0,4,0],[4000,5,0,4,0]],
+  watermelon: [[500,40,100,2.6,38.5],[400,40,165,2.6,63.5],[800,44,293,2.6,112.7],[1610,44,548,2.4,228.3],[3210,48,1167,2.4,486.3],[6400,48,2449,2.4,1020]],
+  apple: [[250,11,0,0,0],[250,11.5,0,0,0],[300,12,0,0,0],[450,12.5,0,0,0],[600,13,0,0,0]],
+  burger: [[725,45,122,1.2,101.7],[590,45,200,1.2,166.7],[1170,50,378,1.2,315],[2340,50,706,1.1,641.8],[4680,55,1428,1,1428],[9280,55,2986,1,2986]],
+  cheesewheel: [[350,12,361,3.5,103.1],[280,12,552,3.5,157.7],[560,14,926,3.5,264.6],[1120,14,1676,3.2,523.8],[2240,16,3558,3.2,1112],[4480,16,7771,3.2,2428],[8960,16,16800,3.2,5250]],
+  croissant: [[175,42,50,2.2,22.7],[140,42,95,2.2,43.2],[280,45,240,2.2,109.1],[560,45,455,2,227.5],[1120,48,970,2,485],[2240,48,2010,2,1005]],
+  hotsauce: [[825,50,215,2.8,76.8],[660,50,353,2.8,126.1],[1320,50,663,2.8,236.8],[2630,50,1206,2.5,482.4],[5270,50,2680,2.5,1072],[10560,50,5629,2.5,2252]],
+  hotdog: [[450,12,152,0.35,434.3],[350,12,247,0.35,705.7],[700,13,460,0.35,1314],[1400,13,801,0.3,2670],[2800,14,1776,0.3,5920],[5600,14,3726,0.3,12420]],
+  lollighost: [[750,12,0,1.6,0],[600,13,0,1.5,0],[1200,14,0,1.4,0],[2400,15,0,1.3,0],[4800,16,0,1.2,0],[9600,18,0,1.15,0]],
+  milk: [[250,7,0,0,0],[300,7.5,0,0,0],[350,8,0,0,0],[500,8.5,0,0,0],[800,9,0,0,0]],
+  milkshake: [[700,60,170,2.4,70.8],[550,64,280,2.4,116.7],[1100,64,510,2.4,212.5],[2200,68,980,2.2,445.5],[4400,68,2040,2.2,927.3],[8800,72,4250,2.2,1932]],
+  moldyswiss: [[300,15,290,1.9,152.6],[400,15,610,1.9,321.1],[700,16,895,1.9,471.1],[1200,16,1200,1.7,705.9],[2600,17,2800,1.7,1647],[5000,18,5955,1.6,3722]],
+  pineapple: [[650,15,8000,0,0]],
+  waffle: [[650,14,1000,2.8,357.1],[500,14,1620,2.8,578.6],[1000,16,2940,2.8,1050],[2000,16,5620,2.8,2007],[4000,16,11600,2.5,4640],[8000,16,24400,2.5,9760]],
+  witchcupcake: [[550,10,554,1.8,307.8],[430,10,912,1.8,506.7],[860,11,1524,1.8,846.7],[1730,11,2772,1.8,1540],[3460,12,5544,1.8,3080],[6910,12,12492,1.8,6940]],
+  banana: [[1000,35,455,2.4,189.6],[950,35,783,2.4,326.3],[1900,38,1429,2.4,595.4],[3800,38,2696,2.2,1225],[7600,42,5607,2.2,2549],[15200,45,11243,2.2,5110]],
+  cinnamonroll: [[950,18,1380,3,460],[750,18,2290,3,763.3],[1500,20,4130,3,1377],[3000,20,7940,3,2647],[6000,22,16400,2.7,6074],[12000,22,34500,2.7,12778]],
+  grimonigiri: [[750,16,1925,2.1,916.7],[725,16,3240,2.1,1543],[1450,18,5950,2.1,2833],[2900,18,11375,2.1,5417],[5800,20,27125,2.1,12917],[11600,20,63000,2.1,30000]],
+  gingerhouse: [[350,15,435,1.9,228.9],[500,16,915,1.9,481.6],[900,18,1340,1.9,705.3],[1500,18,1800,1.7,1059],[3300,20,3280,1.7,1929],[6200,20,6990,1.6,4369]],
+  jackolantern: [[1100,50,430,2.8,153.6],[880,50,706,2.8,252.1],[1760,50,1326,2.8,473.6],[3510,50,2412,2.5,964.8],[7030,50,5360,2.5,2144],[14080,50,11258,2.5,4503]],
+  peashooter: [[1550,55,26,0.2,130],[1230,59,45,0.2,225],[2460,59,73,0.17,429.4],[4930,64,150,0.17,882.4],[9860,70,274,0.14,1957],[19840,70,577,0.14,4121]],
+  popsicle: [[750,18,344,2.6,132.3],[725,18,594,2.6,228.5],[1450,20,998,2.6,383.8],[2900,20,1820,2.3,791.3],[5800,22,3568,2.3,1551],[11600,22,7486,2.3,3255]],
+  spiderpancake: [[850,15,2657,2.5,1063],[640,15,4450,2.5,1780],[1280,16,7715,2.5,3086],[2560,16,14214,2.5,5686],[5120,17,28107,2.3,12220],[10240,17,59218,2.3,25747]],
+  sushi: [[850,14,703,1.5,468.7],[680,14,1209,1.5,806],[1360,16,1867,1.5,1245],[2720,16,3847,1.5,2565],[5440,18,6871,1.5,4581],[10880,18,14413,1.5,9609]],
+  candybox: [[1300,40,470,4.5,104.4],[1040,40,870,4.5,193.3],[2080,40,1560,4.5,346.7],[4160,40,3265,4.5,725.6]],
+  summon: [[1500,8,0,5.5,0],[1200,8,0,4.5,0],[2400,8,0,3.6,0],[4800,8,0,4.4,0],[9600,8,0,3.5,0],[19200,8,0,3.6,0]],
+  deviledegg: [[700,12,1359,1.6,849.4],[800,12,2520,1.6,1575],[1300,13,4745,1.5,3163],[2600,13,8413,1.4,6009],[5200,14,18613,1.4,13295],[10400,14,38589,1.4,27564]],
+  dirtcup: [[1500,20,2200,2.6,846.2],[1200,20,3900,2.6,1500],[2400,22,6800,2.6,2615],[4800,22,12000,2.6,4615],[9600,24,22500,2.6,8654],[19200,24,44000,2.6,16923]],
+  dragonfruit: [[1500,22,1067,1.5,711.3],[1200,22,2045,1.5,1363],[2400,23,3865,1.5,2577],[4800,23,7895,1.4,5639],[9600,24,16790,1.4,11993],[19200,24,37013,1.4,26438]],
+  fortune: [[1300,40,470,4,117.5],[1040,40,870,4,217.5],[2080,40,1560,4,390],[4160,40,3265,4,816.3]],
+  frankentaco: [[900,9,0,0,0],[1200,10,0,0,0],[1900,10,0,0,0],[3000,11,0,0,0],[4100,11,0,0,0],[6800,12,0,0,0]],
+  shakers: [[850,24,1439,1.2,1199],[900,24,2154,1.2,1795],[1530,25,5094,1.2,4245],[2780,25,8151,1.1,7410],[5990,26,14753,1,14753],[11990,26,25981,1,25981]],
+  horsemallow: [[1500,55,1200,2.6,461.5],[1200,55,2205,2.6,848.1],[2400,55,4020,2.6,1546],[4800,55,7620,2.4,3175],[9600,58,15480,2.4,6450],[19200,58,32400,2.4,13500]],
+  medusa: [[1500,45,95,0.8,118.8],[1200,45,160,0.8,200],[2400,48,290,0.8,362.5],[4800,48,545,0.75,726.7],[9600,52,1095,0.75,1460],[19200,52,2580,0.7,3686]],
+  oneeyed: [[1000,65,187,0.3,623.3],[1110,65,301,0.3,1003],[2220,70,597,0.26,2296],[4440,70,913,0.22,4150],[8870,75,1895,0.22,8614],[17710,75,3437,0.2,17185]],
+  werewolf: [[1500,40,633,1.8,351.7],[1200,40,1167,1.8,648.3],[2400,44,2337,1.8,1298],[4800,44,4332,1.6,2708],[9600,48,7687,1.6,4804],[19200,48,16106,1.6,10066]],
+  taco: [[900,8,0,0,0],[1200,9,0,0,0],[1900,9,0,0,0],[3000,10,0,0,0],[4100,10,0,0,0],[6800,11,0,0,0]],
+  twinpopsicle: [[1500,32,640,1.6,400],[1200,32,1180,1.6,737.5],[2400,34,2360,1.6,1475],[4800,34,4380,1.6,2738],[9600,36,7760,1.6,4850],[19200,36,16260,1.6,10163]],
+  bananasplit: [[1000,30,150,2,75],[1150,30,250,2,125],[2300,30,480,2,240],[4600,30,910,1.8,505.6],[9200,30,2010,1.8,1117],[18400,33,4430,1.8,2461]],
+  cauldron: [[300,8,0,4,0],[500,8,0,4,0],[800,9,0,4,0],[2100,10,0,4,0],[4900,10,0,4,0]],
+  chococoffin: [[800,40,180,1.5,120],[640,40,300,1.5,200],[1280,43,520,1.5,346.7],[2560,43,1000,1.4,714.3],[5120,48,2100,1.4,1500],[10240,48,5600,1.3,4308]],
+  corn: [[1000,40,50,0.215,233],[1100,40,74,0.17,436.1],[2200,40,122,0.136,897.1],[4400,40,222,0.112,1982],[8800,40,436,0.093,4698],[17600,40,719,0.07,10301]],
+  forky: [[450,18,125,1.6,78.1],[450,18,245,1.6,153.1],[900,20,490,1.6,306.3],[1800,20,1010,1.6,631.3],[3750,22,2075,1.6,1297],[7500,22,4200,1.6,2625]],
+  frankapple: [[330,10,135,1.6,84.4],[580,11,285,1.2,237.5],[960,11,620,1.2,516.7],[1750,11,1130,1.1,1027],[2450,12,2980,1.1,2709],[5390,14,3750,1,3750]],
+  hauntedpopcorn: [[1000,30,152,2,76],[1150,30,253,2,126.5],[2300,30,485,2,242.5],[4600,30,919,1.8,510.6],[9200,30,2030,1.8,1128],[18400,33,4474,1.8,2486]],
+  macaron: [[900,36,125,1.2,104.2],[720,36,220,1.2,183.3],[1440,39,390,1.2,325],[2880,39,740,1.1,672.7],[5760,42,1520,1.1,1382],[11520,42,3175,1.1,2886]],
+  hotchili: [[900,30,30,1.6,18.8],[720,30,55,1.6,34.4],[1440,32,100,1.6,62.5],[2880,32,200,1.6,125],[5760,34,420,1.6,262.5],[11520,34,900,1.6,562.5]],
+  icescream: [[200,45,13,0.6,21.7],[400,45,29,0.6,48.3],[1000,50,68,0.6,113.3],[2500,50,164,0.6,273.3],[6000,55,413,0.6,688.3],[15000,60,840,0.6,1400]],
+  jawbreaker: [[350,40,84,3.2,26.3],[300,40,151,3.2,47.2],[600,43,270,3.2,84.4],[1200,43,555,3.2,173.4],[2400,46,1043,3.2,325.9],[4500,46,2102,3.2,656.9]],
+  scarecorn: [[1000,30,275,1.6,171.9],[1150,30,460,1.6,287.5],[2300,30,940,1.6,587.5],[4600,30,1840,1.45,1269],[9200,30,4530,1.45,3124],[18400,33,10500,1.45,7241]],
+  soda: [[600,8.5,0,2,0],[800,9.25,0,2,0],[2200,10,0,2,0],[2900,10.75,0,2,0],[4800,11.5,0,2,0]],
+  avocado: [[700,36,198,2,99],[560,36,302,2,151],[1120,40,489,2,244.5],[2240,40,828,1.8,460],[4480,44,1594,1.8,885.6],[8960,44,3018,1.8,1677]],
+  vangarlic: [[1200,12,1440,1.6,900],[1600,12,4600,1.6,2875],[3200,12,8800,1.6,5500],[6400,12,18000,1.6,11250],[12800,12,39000,1.6,24375],[25600,12,90000,1.6,56250]]
+};
+
+// [name, rarity, maxPlaced, attackType, antiAir, rowsKey]
+const DEFS = [
+  ["Bacon","common",6,"Projectile",0,"bacon"],
+  ["Cookie","common",6,"PulseAoE",0,"cookie"],
+  ["Donut","common",6,"LineAoE",0,"donut"],
+  ["Grape Juice","common",6,"Projectile",0,"grapejuice"],
+  ["Melon","common",6,"ProjectileBoomerang",1,"melon"],
+  ["Mustard","common",6,"Projectile",0,"mustard"],
+
+  ["Baguette","rare",6,"Cleave",0,"baguette"],
+  ["Bat Cookie","rare",6,"PulseAoE",0,"cookie"],
+  ["Blueberry Muffin","rare",6,"PulseAoE",0,"blueberrymuffin"],
+  ["Boba","rare",6,"Projectile",1,"boba"],
+  ["Candy Bar","rare",6,"PulseAoE",0,"candybar"],
+  ["Carrot","rare",6,"ProjectileBoomerang",1,"carrot"],
+  ["Cherries","rare",6,"Consumable",1,"cherries"],
+  ["Coffee","rare",6,"Buff",0,"coffee"],
+  ["Fry","rare",6,"Cleave",0,"fry"],
+  ["Honey Bear","rare",6,"PulseAoE",0,"candybar"],
+  ["Jam","rare",6,"ProjectileSplashDamage",0,"jam"],
+  ["Pancakes","rare",6,"PulseAoE",0,"pancakes"],
+  ["Pumpkin Spice","rare",6,"Projectile",1,"pumpkinspice"],
+  ["Syrup","rare",6,"Projectile",0,"syrup"],
+  ["Toaster","rare",3,"Income",0,"toaster"],
+  ["Tombrownie","rare",3,"Income",0,"toaster"],
+  ["Watermelon","rare",6,"ProjectileBoomerang",0,"watermelon"],
+
+  ["Apple","epic",5,"Buff",0,"apple"],
+  ["Burger","epic",5,"Projectile",0,"burger"],
+  ["Cheese Wheel","epic",5,"LineAoE",0,"cheesewheel"],
+  ["Croissant","epic",5,"ProjectileBoomerang",0,"croissant"],
+  ["Ghost Burger","epic",5,"Projectile",1,"burger"],
+  ["Hot Sauce","epic",5,"ProjectileSplashDamage",1,"hotsauce"],
+  ["Hotdog","epic",5,"Projectile",0,"hotdog"],
+  ["Lolli-Ghost","epic",5,"Trap",0,"lollighost"],
+  ["Mad Scientist Milk","epic",5,"Buff",0,"milk"],
+  ["Milk","epic",5,"Buff",0,"milk"],
+  ["Milkshake","epic",5,"Projectile",1,"milkshake"],
+  ["Moldy Swiss","epic",5,"PulseAoE",0,"moldyswiss"],
+  ["Pineapple","epic",5,"Consumable",1,"pineapple"],
+  ["Soup","epic",5,"PulseAoE",0,"moldyswiss"],
+  ["Waffle","epic",5,"LineAoE",0,"waffle"],
+  ["Witch Cupcake","epic",5,"PulseAoE",0,"witchcupcake"],
+  ["Witches Juice","epic",5,"Projectile",1,"milkshake"],
+
+  ["Banana","legendary",5,"ProjectileBoomerang",1,"banana"],
+  ["Cinnamon Roll","legendary",5,"LineAoE",0,"cinnamonroll"],
+  ["Grim Onigiri","legendary",5,"LineAoE",0,"grimonigiri"],
+  ["Haunted Gingerhouse","legendary",5,"PulseAoE",0,"gingerhouse"],
+  ["Jack-o'-Lantern","legendary",5,"ProjectileSplashDamage",1,"jackolantern"],
+  ["Mummy Peashooter","legendary",3,"Projectile",1,"peashooter"],
+  ["Peashooter","legendary",3,"Projectile",1,"peashooter"],
+  ["Popsicle","legendary",5,"PulseAoE",0,"popsicle"],
+  ["Ramen","legendary",5,"PulseAoE",0,"gingerhouse"],
+  ["Skele-Roll","legendary",5,"LineAoE",0,"cinnamonroll"],
+  ["Spider Pancake","legendary",5,"PulseAoE",0,"spiderpancake"],
+  ["Sushi","legendary",5,"PulseAoE",0,"sushi"],
+
+  ["Candy Box","mythic",1,"FortunePulseAoE",0,"candybox"],
+  ["Candy Corn Vampire","mythic",3,"Summon",0,"summon"],
+  ["Deviled Egg","mythic",2,"Projectile",0,"deviledegg"],
+  ["Dirt Cup","mythic",2,"PulseAoE",0,"dirtcup"],
+  ["Dragon Fruit","mythic",2,"Cleave",1,"dragonfruit"],
+  ["Dread Dragonfruit","mythic",2,"Cleave",1,"dragonfruit"],
+  ["Fortune","mythic",1,"FortunePulseAoE",0,"fortune"],
+  ["Frankentaco","mythic",2,"Buff",0,"frankentaco"],
+  ["Good & Evil Shakers","mythic",2,"ProjectilePulseAoE",1,"shakers"],
+  ["Hard Boil","mythic",2,"Projectile",0,"deviledegg"],
+  ["Headless Horsemallow","mythic",2,"ProjectileSplashDamage",1,"horsemallow"],
+  ["Medusa Meatball","mythic",2,"Projectile",1,"medusa"],
+  ["One-Eyed Donut","mythic",3,"Projectile",0,"oneeyed"],
+  ["Pepperoni Werewolf","mythic",2,"ProjectileCleave",1,"werewolf"],
+  ["Pizza","mythic",2,"ProjectileCleave",1,"werewolf"],
+  ["Salt & Pepper","mythic",2,"ProjectilePulseAoE",1,"shakers"],
+  ["Sunny Side Up","mythic",3,"Summon",0,"summon"],
+  ["Taco","mythic",2,"Buff",0,"taco"],
+  ["Twin Popsicle","mythic",2,"ProjectileSplashDamage",1,"twinpopsicle"],
+
+  ["Banana Split","limited",3,"ProjectileSplashDamage",1,"bananasplit"],
+  ["Cauldron","limited",3,"IncomeBuff",0,"cauldron"],
+  ["Choco Coffin","limited",3,"Projectile",1,"chococoffin"],
+  ["Corn","limited",3,"Projectile",1,"corn"],
+  ["Forky","limited",5,"Projectile",0,"forky"],
+  ["Frankenstein Apple","limited",3,"PulseAoEBuff",0,"frankapple"],
+  ["Haunted Popcorn","limited",3,"ProjectileSplashDamage",1,"hauntedpopcorn"],
+  ["Hocus Macaron","limited",3,"Projectile",0,"macaron"],
+  ["Hot Chili","limited",3,"ProjectileBuff",0,"hotchili"],
+  ["Ice Scream","limited",3,"ProjectileLineAoE",1,"icescream"],
+  ["Jawbreaker","limited",5,"ProjectileSplashDamage",1,"jawbreaker"],
+  ["Scarecorn","limited",3,"Projectile",1,"scarecorn"],
+  ["Soda","limited",5,"PulseAoEBuff",0,"soda"],
+
+  ["Avocado","event",5,"ProjectileSplashDamage",0,"avocado"],
+  ["Van Garlic","secret",1,"ProjectileSplashDamage",1,"vangarlic"]
+];
+
+
+const slugify = s => s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+const TOWERS = DEFS
+    .map(([name, rarity, maxPlaced, attackType, aa, key]) => {
+    let total = 0;
+    const upgrades = ROWS[key].map(([cost, range, damage, cooldown, dps], level) => {
+      total += cost;
+      return { level, cost, totalSpent: total, range, damage, cooldown, dps };
+    });
+    return { id: slugify(name), name, rarity, cost: upgrades[0].cost, maxPlaced, attackType, antiAir: !!aa, upgrades };
+  });
+
+const RARITIES = ["common","rare","epic","legendary","mythic","limited","event","secret"];
+
+/* ---------- Traits (index = id used in share links) ---------- */
+const TRAITS = [
+  { id: 0,  name: "None",         desc: "No trait" },
+  { id: 1,  name: "Money I",      desc: "5% cheaper place & upgrade", cost: 0.05 },
+  { id: 2,  name: "Range I",      desc: "+5% range", rng: 0.05 },
+  { id: 3,  name: "Speed I",      desc: "+5% attack speed", spd: 0.05 },
+  { id: 4,  name: "Damage I",     desc: "+5% damage", dmg: 0.05 },
+  { id: 5,  name: "Money II",     desc: "10% cheaper place & upgrade", cost: 0.10 },
+  { id: 6,  name: "Speed II",     desc: "+10% attack speed", spd: 0.10 },
+  { id: 7,  name: "Range II",     desc: "+10% range", rng: 0.10 },
+  { id: 8,  name: "Damage II",    desc: "+10% damage", dmg: 0.10 },
+  { id: 9,  name: "Fine Dining",  desc: "4% per attack to start a streak of 3 attacks at 2.5x damage", streak: { p: 0.04, n: 3, m: 2.5 } },
+  { id: 10, name: "Money III",    desc: "15% cheaper, first upgrade FREE", cost: 0.15, firstFree: true },
+  { id: 11, name: "Range III",    desc: "+15% range", rng: 0.15 },
+  { id: 12, name: "Speed III",    desc: "+15% attack speed", spd: 0.15 },
+  { id: 13, name: "Damage III",   desc: "+15% damage", dmg: 0.15 },
+  { id: 14, name: "BBQ Sauce",    desc: "+10% damage & range, burn +15% over 3s, attacks 10% slower", dmg: 0.10, rng: 0.10, spd: -0.10, burn: 0.15 },
+  { id: 15, name: "Gourmet",      desc: "+15% damage, range & attack speed", dmg: 0.15, rng: 0.15, spd: 0.15 },
+  { id: 16, name: "Caviar",       desc: "+25% damage, range & speed, 10% cheaper", dmg: 0.25, rng: 0.25, spd: 0.25, cost: 0.10 },
+  { id: 17, name: "Exotic",       desc: "+20% damage, range & speed, 15% crit for 2x, +25% vs bosses, 10% cheaper", dmg: 0.20, rng: 0.20, spd: 0.20, cost: 0.10, crit: { p: 0.15, m: 2 }, boss: 0.25 },
+  { id: 18, name: "Decadent",     desc: "+50% damage & speed, +25% range, buffs & income 25% stronger, 25% cheaper", dmg: 0.50, spd: 0.50, rng: 0.25, cost: 0.25, auraBoost: 1.25 },
+  { id: 19, name: "Ambrosia",     desc: "+100% damage, +50% range & speed, slows enemies, 25% cheaper", dmg: 1.00, rng: 0.50, spd: 0.50, cost: 0.25, slow: true }
+];
+
+/* ---------- Timed buffs (uptime scaling) ----------
+   Average_Multiplier = Buff * (Duration / Cooldown) + 1.0 * (1 - Duration / Cooldown) */
+const avgMult = (mult, dur, cd) => mult * (dur / cd) + 1.0 * (1 - dur / cd);
+
+// Hot Chili: attack speed x2 for a few seconds. Base tier = 3s every 8s, max tier = 4s every 6s.
+// ASSUMPTION: the tiers in between are interpolated linearly. Edit these two arrays if you have the real values.
+const HC_MULT = 2;
+const HC_DUR  = [3, 3.2, 3.4, 3.6, 3.8, 4];
+const HC_CD   = [8, 7.6, 7.2, 6.8, 6.4, 6];
+const HC_AVG  = HC_DUR.map((d, i) => avgMult(HC_MULT, d, HC_CD[i]));   // 1.375 ... 1.6667
+
+// Frankenstein Apple: DAMAGE buff for nearby towers (overcharge) for 4s, cooldown 16-18s
+const FA_MULT = [1.6, 1.7, 1.8, 1.9, 2.0, 2.0];
+const FA_DUR  = [4, 4, 4, 4, 4, 4];
+const FA_CD   = [16, 16, 17, 17, 18, 18];
+const FA_AVG  = FA_DUR.map((d, i) => avgMult(FA_MULT[i], d, FA_CD[i]));   // 1.15 ... 1.2222
+
+// Towers whose buff only runs part of the time: values shown are the AVERAGE of ONE tower
+const TIMED_BUFFS = new Set(["Hot Chili", "Frankenstein Apple"]);
+const TIMED_NOTE = "Timed buff: the value is the average of a single tower (buff x uptime). Several of these towers with staggered timings keep the buff up longer, so the real average can be much higher.";
+
+/* ---------- Support auras (real values from the game tables) ----------
+   vals = buff per upgrade index.  cat: "damage" | "speed" | "range" */
+// Taco and Frankentaco share one progression (tier 0 to 5): speed 10 to 45%, damage 10 to 45%, range 2 to 10%
+const TACO_SPEED  = [0.10, 0.15, 0.225, 0.30, 0.375, 0.45];
+const TACO_DAMAGE = [0.10, 0.15, 0.225, 0.30, 0.375, 0.45];
+const TACO_RANGE  = [0.02, 0.035, 0.05, 0.065, 0.08, 0.10];
+const AURAS = {
+  "Coffee":             [{ cat: "speed",  vals: [0.30, 0.35, 0.40, 0.45, 0.50] }],
+  "Apple":              [{ cat: "range",  vals: [0.09, 0.11, 0.13, 0.16, 0.20] }],
+  "Milk":               [{ cat: "damage", vals: [0.35, 0.40, 0.45, 0.50, 0.55] }],
+  "Mad Scientist Milk": [{ cat: "damage", vals: [0.35, 0.40, 0.45, 0.50, 0.55] }],
+  "Frankentaco":        [{ cat: "speed",  vals: TACO_SPEED },
+                         { cat: "damage", vals: TACO_DAMAGE },
+                         { cat: "range",  vals: TACO_RANGE }],
+  "Taco":               [{ cat: "speed",  vals: TACO_SPEED },
+                         { cat: "damage", vals: TACO_DAMAGE },
+                         { cat: "range",  vals: TACO_RANGE }],
+  "Soda":               [{ cat: "range",  vals: [0.06, 0.07, 0.08, 0.09, 0.10] }],
+  "Cauldron":           [{ cat: "damage", vals: [0.27, 0.31, 0.35, 0.39, 0.45] }],
+  "Hot Chili":          [{ cat: "speed",  vals: HC_AVG.map(m => m - 1) }],
+  "Frankenstein Apple": [{ cat: "damage", vals: FA_AVG.map(m => m - 1) }]
+};
+
+/* ---------- Special DPS / income towers ---------- */
+const POISON_TICKS_PER_SEC = 1; // assumption: the tables give damage per tick, not the tick rate
+const num = n => Math.round(n).toLocaleString("en-US");
+(function applySpecials() {
+  const get = n => TOWERS.find(t => t.name === n);
+
+  // Summoners: DPS = minion damage x minion count / cooldown
+  const count = [2, 2, 2, 3, 3, 4], dmg = [12200, 16800, 23400, 38000, 54600, 92000], mx = [4, 4, 4, 6, 6, 8];
+  for (const n of ["Candy Corn Vampire", "Sunny Side Up"]) {
+    get(n).upgrades.forEach((u, i) => {
+      u.dps = dmg[i] * count[i] / u.cooldown;
+      u.details = [["Minions", String(count[i])], ["Minion max", String(mx[i])], ["Minion damage", num(dmg[i])], ["Cooldown", u.cooldown + "s"]];
+    });
+  }
+
+  // Soda: poison only (4s duration outlasts its 2s cooldown, so it never stacks)
+  const sodaTick = [1125, 1950, 3750, 7750, 13350];
+  get("Soda").upgrades.forEach((u, i) => {
+    u.dps = sodaTick[i] * POISON_TICKS_PER_SEC * Math.min(4, u.cooldown) / u.cooldown;
+    u.details = [["Poison / tick", num(sodaTick[i])], ["Poison duration", "4s"], ["Cooldown", u.cooldown + "s"]];
+  });
+
+  // Hot Chili: direct hit + non-stacking poison zone + timed attack speed aura
+  const hcTick = [22, 39, 73, 148, 304, 600], zoneMax = [6, 6, 6, 6, 8, 8];
+  get("Hot Chili").upgrades.forEach((u, i) => {
+    const direct = u.damage / u.cooldown;
+    u.dps = direct + hcTick[i] * POISON_TICKS_PER_SEC * Math.min(1.5, u.cooldown) / u.cooldown;
+    u.details = [["Direct hit", num(u.damage)], ["Poison / tick", num(hcTick[i])], ["Poison duration", "1.5s"], ["Zone max / radius", zoneMax[i] + " / 3.5"],
+      ["Speed aura", `${HC_MULT}x for ${HC_DUR[i]}s / ${HC_CD[i]}s`],
+      ["Avg speed buff (1 tower)", "+" + (Math.round((HC_AVG[i] - 1) * 10000) / 100) + "%"]];
+  });
+
+  // Frankenstein Apple: damage buff aura with uptime (its own attack stays as listed in the table)
+  get("Frankenstein Apple").upgrades.forEach((u, i) => {
+    u.details = [["Damage buff (overcharge)", FA_MULT[i] + "x"], ["Duration / cooldown", `${FA_DUR[i]}s / ${FA_CD[i]}s`],
+      ["Uptime", (Math.round(FA_DUR[i] / FA_CD[i] * 1000) / 10) + "%"],
+      ["Avg damage buff (1 tower)", "+" + (Math.round((FA_AVG[i] - 1) * 10000) / 100) + "%"]];
+  });
+
+  // Good & Evil Shakers (also listed as Salt & Pepper): combined stats of both halves.
+  // ASSUMPTION: the pulse fires with every attack, so DPS = (hit damage + pulse damage) / cooldown.
+  const gePulse = [547, 878, 2111, 2911, 5351, 10626], geRadius = [18, 18, 20, 20, 22, 22];
+  for (const n of ["Good & Evil Shakers", "Salt & Pepper"]) {
+    get(n).upgrades.forEach((u, i) => {
+      u.dps = (u.damage + gePulse[i]) / u.cooldown;
+      u.details = [["Damage per hit", num(u.damage)], ["Pulse damage", num(gePulse[i])], ["Pulse radius", String(geRadius[i])],
+        ["Total per attack", num(u.damage + gePulse[i])], ["Cooldown", u.cooldown + "s"], ["Total spent", "$" + num(u.totalSpent)]];
+    });
+  }
+
+  // Cauldron: income per tick, every 4 seconds
+  const inc = [90, 200, 400, 700, 1000];
+  get("Cauldron").upgrades.forEach((u, i) => {
+    u.income = inc[i];
+    u.details = [["Income per tick", "$" + num(inc[i])], ["Tick every", u.cooldown + "s"]];
+  });
+})();
+
+const LIMITS = { maxUnits: 20, maxLevel: 50, levelBonusPerLevel: 0.008 };
+
+
+(() => {
+"use strict";
+const $ = s => document.querySelector(s);
+const cap = s => s[0].toUpperCase() + s.slice(1);
+const clamp = (v,a,b) => Math.min(b, Math.max(a, v));
+const fmt = n => n >= 100 ? Math.round(n).toLocaleString("en-US") : (Math.round(n*10)/10).toString();
+const money = n => "$" + Math.round(n).toLocaleString("en-US");
+const pct = n => (Math.round(n*1000)/10) + "%";
+function h(tag, a, ...kids){
+  const el = document.createElement(tag);
+  for (const [k,v] of Object.entries(a||{})){
+    if (v === false || v == null) continue;
+    if (k === "class") el.className = v;
+    else if (k === "text") el.textContent = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of kids.flat()) if (c != null) el.append(c.nodeType ? c : document.createTextNode(c));
+  return el;
+}
+
+const byId = new Map(TOWERS.map(t => [t.id, t]));
+const MAX_SLOTS = 6;
+const state = {
+  players: [[], [], [], []], cur: 0,
+  get team(){ return this.players[this.cur]; },
+  set team(v){ this.players[this.cur] = v; }
+};
+let view = "cards", activeId = null;
+try { view = localStorage.getItem("snack-defense-view") === "table" ? "table" : "cards"; } catch(e){}
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const smooth = reduceMotion ? "auto" : "smooth";
+function setActive(id){
+  activeId = id;
+  document.querySelectorAll("[data-id]").forEach(e => e.classList.toggle("active", e.dataset.id === id));
+}
+function bump(el, text){ if (el.textContent !== text){ el.textContent = text; el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); } }
+const filt = { q: "", rar: new Set(), type: new Set(), aa: false };
+
+function typeTags(t){
+  const a = t.attackType, s = new Set();
+  if (/Buff/.test(a)) s.add("Support");
+  if (/Income/.test(a)) s.add("Income");
+  if (/AoE|Splash|Cleave/.test(a)) s.add("AoE");
+  if (a === "Projectile" || a === "ProjectileBoomerang" || a === "ProjectileBuff") s.add("Single-Target");
+  return s;
+}
+const TYPES = ["AoE","Single-Target","Support","Income"];
+const atkLabel = t => t.attackType.replace(/Buff$/, " + Support");
+const used = (team = state.team) => team.reduce((n,s) => n + s.qty, 0);
+const isSupport = t => !!AURAS[t.name];
+const hasDps = t => t.upgrades.some(u => u.dps > 0);
+const EXOTIC = TRAITS.find(x => x.name === "Exotic").id;
+const STAR_BONUS = 0.05;      // per star: +5% DPS, or +5% buff strength on supports
+const SHINY_SPEED = 0.10;     // Shiny: +10% attack speed
+const JUMBO_RANGE = 0.10;     // Jumbo: +10% range
+const JUMBO_RARITIES = ["legendary", "mythic", "limited", "event"];  // "Unlimited" = the Limited tier
+const jumboValid = t => JUMBO_RARITIES.includes(t.rarity);
+
+/* ---------- maths ---------- */
+// boss only matters for the single tower instance that carries Exotic
+function traitMods(tr, boss){
+  let extra = 1;
+  if (tr.streak){ const {p,n,m} = tr.streak; extra *= (1/p + n*m)/(1/p + n); }
+  if (tr.crit) extra *= 1 + tr.crit.p*(tr.crit.m - 1);
+  if (tr.boss && boss) extra *= 1 + tr.boss;
+  if (tr.burn) extra *= 1 + tr.burn;
+  return { dmg: 1 + (tr.dmg||0), spd: 1 + (tr.spd||0), extra };
+}
+const auraVal = (e, up) => e.vals ? e.vals[Math.min(up, e.vals.length-1)] : e.base + e.per*up;
+function compute(buffs, team = state.team){
+  const cands = { damage:[], speed:[], range:[] };
+  const sup = new Map();
+  if (buffs) for (const s of team){
+    const t = byId.get(s.id), a = AURAS[t.name];
+    if (!a) continue;
+    const boost = TRAITS[s.trait].auraBoost || 1;
+    const eff = a.filter(e => cands[e.cat]).map(e => ({ cat:e.cat, value:auraVal(e, s.up)*(1 + (s.stars||0)*STAR_BONUS)*boost }));
+    sup.set(s.id, eff);
+    for (const e of eff) cands[e.cat].push({ value:e.value, src:t.name, sid:s.id });
+  }
+  // strongest aura per category; a tower never receives its own aura
+  const best = (cat, sid) => { let b = null; for (const c of cands[cat]) if (c.sid !== sid && (!b || c.value > b.value)) b = c; return b; };
+  const auras = { damage:best("damage"), speed:best("speed"), range:best("range") };
+  const rows = new Map();
+  let total = 0, cost = 0, aa = 0, income = 0;
+  for (const s of team){
+    const t = byId.get(s.id), u = t.upgrades[s.up], tr = TRAITS[s.trait];
+    const disc = tr.cost || 0;
+    let c = t.upgrades.slice(0, s.up+1).reduce((n,x) => n + x.cost*(1-disc), 0);
+    if (tr.firstFree && s.up >= 1) c -= t.upgrades[1].cost*(1-disc);
+    c *= s.qty; cost += c;
+    const gets = !(isSupport(t) && u.dps <= 0);
+    const bd = gets ? best("damage", s.id) : null, bs = gets ? best("speed", s.id) : null, br = gets ? best("range", s.id) : null;
+    const dA = bd ? bd.value : 0, sA = bs ? bs.value : 0, rA = br ? br.value : 0;
+    const m = traitMods(tr, s.boss), lb = (s.lvl-1)*LIMITS.levelBonusPerLevel;
+    const starM = 1 + (s.stars||0)*STAR_BONUS, shinyM = s.shiny ? 1 + SHINY_SPEED : 1;
+    const jv = s.jumbo && jumboValid(t) ? 1 + JUMBO_RANGE : 1;
+    const dps = u.dps > 0 ? u.dps*s.qty*(1+lb)*starM*shinyM*m.dmg*m.spd*m.extra*(1+dA)*(1+sA) : 0;
+    total += dps; if (t.antiAir) aa += dps;
+    const inc = u.income ? u.income*(60/u.cooldown)*s.qty*(tr.auraBoost || 1) : 0;
+    income += inc;
+    rows.set(s.id, { dps, cost:c, lb, inc, stars:s.stars||0, jumbo: s.jumbo ? (jumboValid(t) ? "on" : "invalid") : null,
+      range: u.range*(1+(tr.rng||0))*(1+rA)*jv,
+      recv: [bd && ["Damage",dA,bd.src], bs && ["Speed",sA,bs.src], br && ["Range",rA,br.src]].filter(Boolean),
+      eff: sup.get(s.id) });
+  }
+  return { rows, auras, total, cost, aa, income };
+}
+
+/* ---------- toast ---------- */
+let tt; function toast(m){ const e=$("#toast"); e.textContent=m; e.classList.add("show"); clearTimeout(tt); tt=setTimeout(()=>e.classList.remove("show"),2300); }
+
+/* ---------- mutations ---------- */
+function addTower(id){
+  const t = byId.get(id), s = state.team.find(x => x.id === id);
+  if (used() >= LIMITS.maxUnits) return toast("Map is full: 20 towers placed.");
+  if (s){
+    if (s.qty >= t.maxPlaced) return toast(`${t.name} is limited to ${t.maxPlaced}.`);
+    s.qty++;
+  } else {
+    if (state.team.length >= MAX_SLOTS) return toast("Loadout is full: 6 different towers max.");
+    const q = Math.min(t.maxPlaced, LIMITS.maxUnits - used());
+    state.team.push({ id, qty:q, up:t.upgrades.length-1, lvl:1, trait:0, boss:false, stars:0, jumbo:false, shiny:false });
+  }
+  structure(); toast(`Added ${t.name}`);
+}
+function setQty(s, q){
+  const t = byId.get(s.id);
+  if (q < 1) return;
+  if (q > t.maxPlaced) return toast(`${t.name} is limited to ${t.maxPlaced}.`);
+  if (q > s.qty && used() >= LIMITS.maxUnits) return toast("Map is full: 20 towers placed.");
+  s.qty = q; structure();
+}
+function removeSlot(s){ state.team = state.team.filter(x => x !== s); if (dlg.open) dlg.close(); structure(); }
+
+/* ---------- picker ---------- */
+const panel = $("#panel"), btnPick = $("#btnPick");
+function openPanel(o){ panel.classList.toggle("open", o); $("#scrim").classList.toggle("open", o); btnPick.setAttribute("aria-expanded", o); if (o) { renderTiles(); if (matchMedia("(min-width:641px)").matches) $("#search").focus(); } }
+btnPick.addEventListener("click", e => { e.stopPropagation(); openPanel(!panel.classList.contains("open")); });
+$("#btnDone").addEventListener("click", () => openPanel(false));
+$("#btnClosePanel").addEventListener("click", () => openPanel(false));
+$("#scrim").addEventListener("click", () => openPanel(false));
+panel.addEventListener("click", e => e.stopPropagation());
+document.addEventListener("click", e => { if (!e.target.closest(".picker")) openPanel(false); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") openPanel(false); });
+
+function chip(label, on, cb){
+  const b = h("button", { class:"chip", type:"button", "aria-pressed":String(on), text:label });
+  b.addEventListener("click", () => { const p = b.getAttribute("aria-pressed") !== "true"; b.setAttribute("aria-pressed", String(p)); cb(p); });
+  return b;
+}
+function renderChips(){
+  const tog = (set,v) => p => { p ? set.add(v) : set.delete(v); renderTiles(); };
+  $("#rarChips").replaceChildren(...RARITIES.map(r => chip(cap(r), false, tog(filt.rar, r))));
+  $("#typeChips").replaceChildren(...TYPES.map(r => chip(r, false, tog(filt.type, r))), chip("Anti-Air", false, p => { filt.aa = p; renderTiles(); }));
+}
+function renderTiles(){
+  $("#pinfo").textContent = `Loadout ${state.team.length} / ${MAX_SLOTS} different towers · ${used()} / ${LIMITS.maxUnits} placed`;
+  const q = filt.q.trim().toLowerCase();
+  const list = TOWERS.filter(t => {
+    if (q && !t.name.toLowerCase().includes(q)) return false;
+    if (filt.rar.size && !filt.rar.has(t.rarity)) return false;
+    if (filt.aa && !t.antiAir) return false;
+    if (filt.type.size){ const g = typeTags(t); if (![...filt.type].some(f => g.has(f))) return false; }
+    return true;
+  });
+  $("#tiles").replaceChildren(...(list.length ? list.map(t => {
+    const s = state.team.find(x => x.id === t.id);
+    const mx = Math.max(...t.upgrades.map(u => u.dps));
+    const full = s ? (s.qty >= t.maxPlaced || used() >= LIMITS.maxUnits) : (state.team.length >= MAX_SLOTS || used() >= LIMITS.maxUnits);
+    return h("button", { class:"pt", type:"button", style:`--rc:var(--${t.rarity})`, disabled: full, onclick: () => addTower(t.id), "aria-label":`Add ${t.name}` },
+      s ? h("span", { class:"c", text:s.qty }) : null,
+      h("span", { class:"n", text:t.name }),
+      h("span", { class:"m", text:`${cap(t.rarity)} · ${money(t.cost)}` }),
+      h("span", { class:"m", text: mx > 0 ? `Up to ${fmt(mx)} DPS` : [...typeTags(t)].join(", ") || t.attackType }),
+      h("span", { class:"m", text:`Max ${t.maxPlaced}${t.antiAir ? " · Anti-Air" : ""}` }));
+  }) : [h("div", { class:"empty", text:"No towers match. Clear a filter or change your search." })]));
+}
+$("#search").addEventListener("input", e => { filt.q = e.target.value; renderTiles(); });
+
+/* ---------- team cards ---------- */
+function renderTeam(){
+  const box = $("#team");
+  $("#vCards").setAttribute("aria-pressed", String(view === "cards"));
+  $("#vTable").setAttribute("aria-pressed", String(view === "table"));
+  if (!state.team.length){ box.className = "team"; box.replaceChildren(h("div", { class:"noteam", text:"Your team is empty. Use Add tower to pick your first unit." })); return; }
+  if (view === "table"){
+    box.className = "";
+    const th = (x, c) => h("th", { class:c, text:x });
+    box.replaceChildren(h("div", { class:"tablewrap" }, h("table", { class:"ttable" },
+      h("thead", {}, h("tr", {}, th("Tower"), th("Placed"), th("Upgrade"), th("Level","hide-sm"), th("Trait","hide-sm"), th("DPS"), th("Cost"), th(""))),
+      h("tbody", {}, state.team.map(rowEl)))));
+  } else {
+    box.className = "team";
+    box.replaceChildren(...state.team.map(cardEl));
+  }
+}
+function setView(v){ view = v; try { localStorage.setItem("snack-defense-view", v); } catch(e){} renderTeam(); update(); }
+
+function cardEl(s){
+  const t = byId.get(s.id);
+  const dps = h("div", { class:"cdps" }), tags = h("div", { class:"tags" }), meta = h("div", { class:"cmeta" });
+  const out = h("output", { text:s.qty });
+  const minus = h("button", { type:"button", "aria-label":"Fewer", text:"−", onclick: () => setQty(s, s.qty-1) });
+  const el = h("article", { class:"card", style:`--rc:var(--${t.rarity})`, "data-id":s.id, tabindex:"0", role:"button", "aria-label":`Customize ${t.name}` },
+    h("div", { class:"card-top" },
+      h("div", {}, h("div", { class:"cname", text:t.name }), h("div", { class:"cmeta" }, h("span", { class:"rar", text:cap(t.rarity) }), ` · ${atkLabel(t)}`), meta),
+      dps),
+    tags,
+    h("div", { class:"card-foot" },
+      h("button", { class:"linkbtn", type:"button", text:"Remove", onclick: e => { e.stopPropagation(); removeSlot(s); } }),
+      h("div", { class:"stepper", onclick: e => e.stopPropagation() },
+        minus, out,
+        h("button", { type:"button", "aria-label":"More", text:"+", onclick: () => setQty(s, s.qty+1) }))));
+  el.addEventListener("click", () => openModal(s));
+  el.addEventListener("focus", () => setActive(s.id));
+  el.addEventListener("keydown", e => { if (e.key === "Enter" && e.target === el) openModal(s); });
+  el._upd = r => {
+    dps.replaceChildren(r.dps > 0 ? fmt(r.dps) : "–", h("small", { text: r.dps > 0 ? "DPS" : (isSupport(t) ? "support" : "no direct DPS") }));
+    meta.textContent = `Upgrade ${s.up}/${t.upgrades.length-1} · Lv ${s.lvl} · ${money(r.cost)}`;
+    out.textContent = s.qty; minus.disabled = s.qty <= 1;
+    const g = [];
+    if (t.antiAir) g.push(h("span", { class:"tag aa", text:"Anti-Air" }));
+    if (s.trait) g.push(h("span", { class:"tag tr", text:TRAITS[s.trait].name }));
+    if (s.trait === EXOTIC && s.boss) g.push(h("span", { class:"tag tr", text:"Boss +25%" }));
+    if (r.stars) g.push(h("span", { class:"tag tr", text:`★ ${r.stars}` }));
+    if (s.shiny) g.push(h("span", { class:"tag tr", text:"Shiny +10% speed" }));
+    if (r.jumbo === "on") g.push(h("span", { class:"tag tr", text:"Jumbo +10% range" }));
+    if (r.jumbo === "invalid") g.push(h("span", { class:"tag warn", text:"Jumbo invalid (not applied)" }));
+    if (r.inc > 0) g.push(h("span", { class:"tag tr", text:`Income ${money(r.inc)}/min` }));
+    r.recv.forEach(([c,v,src]) => g.push(h("span", { class:"tag buff", text:`${c} +${pct(v)} from ${src}` })));
+    if (r.eff) r.eff.forEach(e => { const on = isApplied(t, e);
+      g.push(h("span", { class:"tag " + (on ? "buff" : "warn"), text: (TIMED_BUFFS.has(t.name) ? `${cap(e.cat)} +${pct(e.value)} avg` : `${cap(e.cat)} +${pct(e.value)}`) + (on ? " applied" : " overridden") })); });
+    tags.replaceChildren(...g);
+  };
+  return el;
+}
+function rowEl(s){
+  const t = byId.get(s.id);
+  const sub = h("div", { class:"cmeta" }), out = h("output"), up = h("td"), lv = h("td", { class:"hide-sm" }), tr = h("td", { class:"hide-sm" }), dps = h("td", { class:"dpsc" }), cost = h("td");
+  const minus = h("button", { type:"button", "aria-label":"Fewer", text:"−", onclick: () => setQty(s, s.qty-1) });
+  const row = h("tr", { class:"trow", "data-id":s.id, tabindex:"0", role:"button", "aria-label":`Customize ${t.name}`, style:`--rc:var(--${t.rarity})` },
+    h("td", {}, h("div", { class:"cname", text:t.name }), h("div", { class:"cmeta" }, h("span", { class:"rar", text:cap(t.rarity) })), sub),
+    h("td", { onclick: e => e.stopPropagation() }, h("div", { class:"stepper" }, minus, out, h("button", { type:"button", "aria-label":"More", text:"+", onclick: () => setQty(s, s.qty+1) }))),
+    up, lv, tr, dps, cost,
+    h("td", {}, h("button", { class:"linkbtn", type:"button", text:"Remove", onclick: e => { e.stopPropagation(); removeSlot(s); } })));
+  row.addEventListener("click", () => openModal(s));
+  row.addEventListener("focus", () => setActive(s.id));
+  row.addEventListener("keydown", e => { if (e.key === "Enter" && e.target === row) openModal(s); });
+  row._upd = r => {
+    out.textContent = s.qty; minus.disabled = s.qty <= 1;
+    up.textContent = `${s.up}/${t.upgrades.length-1}`; lv.textContent = s.lvl; tr.textContent = s.trait ? TRAITS[s.trait].name : "–";
+    dps.textContent = r.dps > 0 ? fmt(r.dps) : "–"; cost.textContent = money(r.cost);
+    const bits = [];
+    if (r.stars) bits.push(`★${r.stars}`);
+    if (s.shiny) bits.push("Shiny");
+    if (r.jumbo === "on") bits.push("Jumbo");
+    if (r.jumbo === "invalid") bits.push("Jumbo invalid");
+    r.recv.forEach(([c,v]) => bits.push(`${c} +${pct(v)}`));
+    if (r.eff) r.eff.forEach(e => bits.push(`${cap(e.cat)} +${pct(e.value)}${TIMED_BUFFS.has(t.name) ? " avg" : ""}${isApplied(t, e) ? "" : " (overridden)"}`));
+    if (r.inc > 0) bits.push(`Income ${money(r.inc)}/min`);
+    if (t.antiAir) bits.push("Anti-Air");
+    sub.textContent = bits.join(" · ");
+  };
+  return row;
+}
+function isApplied(t, e){ const b = lastWith.auras[e.cat]; return !!b && b.src === t.name && Math.abs(b.value - e.value) < 1e-9; }
+
+/* ---------- modal ---------- */
+const dlg = $("#dlg"), dlgTrait = $("#dlgTrait");
+dlgTrait.addEventListener("click", e => { if (e.target === dlgTrait) dlgTrait.close(); });
+let modalUpd = null;
+dlg.addEventListener("click", e => { if (e.target === dlg) dlg.close(); });
+dlg.addEventListener("close", () => {
+  modalUpd = null;
+  const el = document.querySelector(`[data-id="${activeId}"]`);
+  if (el){ el.scrollIntoView({ behavior:smooth, block:"nearest" }); try { el.focus({ preventScroll:true }); } catch(e){} }
+});
+function openModal(s){
+  setActive(s.id);
+  const t = byId.get(s.id), body = $("#dlgBody");
+  const o = { up:h("b"), lv:h("b"), desc:h("div",{class:"trdesc"}), dw:h("b"), dn:h("b"), rg:h("b"), ct:h("b"), q:h("output"), rcv:h("div",{class:"rcv"}), brk:h("div"), det:h("div",{class:"mstats"}) };
+  const upR = h("input", { type:"range", min:0, max:t.upgrades.length-1, step:1, value:s.up, "aria-label":"Upgrade level" });
+  upR.addEventListener("input", () => { s.up = +upR.value; update(); });
+  const lvR = h("input", { type:"range", min:1, max:LIMITS.maxLevel, step:1, value:s.lvl, "aria-label":"Tower level" });
+  lvR.addEventListener("input", () => { s.lvl = +lvR.value; update(); });
+  const lvField = h("div", { class:"field" }, h("label", {}, "Level ", o.lv), lvR);
+  lvField.hidden = !hasDps(t);
+  const starBtns = [1,2,3,4,5].map(i => h("button", { type:"button", class:"star", "aria-label":`${i} star${i>1?"s":""}`, text:"★",
+    onclick: () => { s.stars = ((s.stars||0) === i ? i-1 : i); update(); } }));
+  const starInfo = h("span", { class:"hint2" });
+  const starField = h("div", { class:"field" }, h("div", { class:"lab" }, h("span", {}, "Stars ", starInfo)), h("div", { class:"stars" }, starBtns));
+  const jumboCb = h("input", { type:"checkbox" });
+  jumboCb.addEventListener("change", () => { s.jumbo = jumboCb.checked; update(); });
+  const jumboNote = h("div", { class:"hint2" });
+  const jumboField = h("div", { class:"field" }, h("label", { class:"bossrow" }, jumboCb, "Jumbo"), jumboNote);
+  const shinyCb = h("input", { type:"checkbox" });
+  shinyCb.addEventListener("change", () => { s.shiny = shinyCb.checked; update(); });
+  const shinyField = h("div", { class:"field" }, h("label", { class:"bossrow" }, shinyCb, "Shiny"));
+  const traitName = h("b"), traitSub = h("span", { class:"tsub" });
+  const traitBtn = h("button", { type:"button", class:"trait-btn", "aria-haspopup":"dialog", onclick: () => openTraitPicker(s) },
+    h("span", { class:"tmain" }, traitName, traitSub), h("span", { class:"tchev", text:"▾" }));
+  const bossCb = h("input", { type:"checkbox", id:"bossCb" }); bossCb.checked = !!s.boss;
+  bossCb.addEventListener("change", () => { s.boss = bossCb.checked; update(); });
+  const bossRow = h("label", { class:"bossrow" }, bossCb, "Target is a boss (+25% damage on this tower)");
+  const minus = h("button", { type:"button", text:"−", "aria-label":"Fewer", onclick: () => setQty(s, s.qty-1) });
+  const step = h("div", { class:"stepper" }, minus, o.q, h("button", { type:"button", text:"+", "aria-label":"More", onclick: () => setQty(s, s.qty+1) }));
+  body.replaceChildren(
+    h("div", { class:"m-head", style:`--rc:var(--${t.rarity})` },
+      h("div", {}, h("div", { class:"cname", style:"font-size:22px", text:t.name }),
+        h("div", { class:"cmeta" }, h("span", { class:"rar", text:cap(t.rarity) }), ` · ${atkLabel(t)} · max ${t.maxPlaced}${t.antiAir ? " · Anti-Air" : ""}`)),
+      h("button", { class:"x", type:"button", "aria-label":"Close", text:"✕", onclick: () => dlg.close() })),
+    h("div", { class:"field" }, h("div", { class:"lab" }, "Trait"), traitBtn, o.desc, bossRow),
+    lvField,
+    h("div", { class:"field" }, h("label", {}, "Upgrade ", o.up), upR),
+    starField, jumboField, shinyField,
+    h("div", { class:"mstats" },
+      h("div", {}, h("span", { text:"DPS with buff" }), o.dw),
+      h("div", {}, h("span", { text:"DPS without buff" }), o.dn),
+      h("div", {}, h("span", { text:"Range" }), o.rg),
+      h("div", {}, h("span", { text:"Cost" }), o.ct)),
+    o.det, o.rcv, o.brk,
+    h("div", { class:"mfoot" },
+      h("div", { class:"field", style:"margin:0" }, h("div", { class:"lab" }, "Placed"), step),
+      h("button", { class:"danger", type:"button", text:"Remove tower", onclick: () => removeSlot(s) })));
+  modalUpd = () => {
+    const u = t.upgrades[s.up], rw = lastWith.rows.get(s.id), ro = lastWithout.rows.get(s.id);
+    if (!rw) return;
+    starBtns.forEach((b,i) => b.classList.toggle("on", i < (s.stars||0)));
+    starInfo.textContent = `+${(s.stars||0)*5}% ` + (isSupport(t) ? (hasDps(t) ? "DPS and buff strength" : "buff strength") : "DPS");
+    const jOk = jumboValid(t);
+    shinyCb.checked = !!s.shiny;
+    jumboCb.checked = !!s.jumbo; jumboCb.disabled = !jOk && !s.jumbo;
+    jumboNote.textContent = jOk ? "" : (s.jumbo ? "Invalid: Jumbo only works on Legendary, Mythic, Limited or Event towers, so it is not applied." : "Jumbo only works on Legendary, Mythic, Limited or Event towers.");
+    upR.value = s.up; lvR.value = s.lvl; traitName.textContent = TRAITS[s.trait].name; traitSub.textContent = s.trait ? "Tap to change trait" : "Tap to choose a trait"; bossCb.checked = !!s.boss;
+    o.up.textContent = `${s.up}/${t.upgrades.length-1}` + (u.dps > 0 ? ` · ${fmt(u.dps)} base DPS` : "");
+    o.lv.textContent = `${s.lvl} (+${pct(rw.lb)} damage)`;
+    o.desc.textContent = s.trait ? TRAITS[s.trait].desc : "";
+    bossRow.hidden = s.trait !== EXOTIC;
+    o.dw.textContent = rw.dps > 0 ? fmt(rw.dps) : "–"; o.dn.textContent = ro.dps > 0 ? fmt(ro.dps) : "–";
+    o.rg.textContent = (Math.round(rw.range*10)/10).toString(); o.ct.textContent = money(rw.cost);
+    o.q.textContent = s.qty; minus.disabled = s.qty <= 1;
+    o.det.replaceChildren(...(u.details || []).map(([k,v]) => h("div", {}, h("span", { text:k }), h("b", { text:v }))));
+    if (rw.inc > 0) o.det.append(h("div", {}, h("span", { text:"Income per minute" }), h("b", { text:money(rw.inc) })));
+    o.rcv.textContent = rw.recv.length ? "Buffs received: " + rw.recv.map(([c,v,src]) => `${c} +${pct(v)} (${src})`).join(", ") : "";
+    // support breakdown: raw vs applied
+    if (isSupport(t)){
+      const eff = rw.eff || [];
+      const rows = eff.map(e => {
+        const b = lastWith.auras[e.cat], on = isApplied(t, e);
+        return h("tr", {},
+          h("td", { text:cap(e.cat) }),
+          h("td", { text:`+${pct(e.value)}` }),
+          h("td", { text: b ? `+${pct(b.value)} (${b.src})` : "–" }),
+          h("td", { class: on ? "ok" : "no", text: on ? "Fully active" : `Overridden by ${b ? b.src : "another aura"}` }));
+      });
+      o.brk.replaceChildren(h("div", { class:"brk" },
+        h("h4", { text:"Support buff breakdown" }),
+        TIMED_BUFFS.has(t.name) ? h("p", { class:"ok", text: TIMED_NOTE }) : null,
+        h("p", { text: eff.length ? "Raw is what this tower provides. Applied is what your damage towers actually receive: only the strongest aura per category counts." : "This tower boosts income only, so it does not change DPS." }),
+        eff.length ? h("table", {}, h("thead", {}, h("tr", {}, h("th", { text:"Buff" }), h("th", { text:"Raw" }), h("th", { text:"Applied" }), h("th", { text:"Status" }))), h("tbody", {}, rows)) : null));
+    } else o.brk.replaceChildren();
+  };
+  if (!dlg.open) dlg.showModal();
+  update();
+  // bring the popup straight into view, from the top
+  dlg.scrollTop = 0;
+  requestAnimationFrame(() => dlg.scrollIntoView({ behavior:smooth, block:"center" }));
+}
+
+/* ---------- trait picker ---------- */
+const traitTier = id => id === 0 ? 0 : id <= 4 ? 1 : id <= 8 ? 2 : id <= 15 ? 3 : id <= 17 ? 4 : 5;
+const TIER_COLOR = ["--muted", "--common", "--rare", "--epic", "--legendary", "--mythic"];
+function traitChips(tr){
+  const c = [];
+  if (tr.dmg) c.push([`Damage ${tr.dmg > 0 ? "+" : ""}${pct(tr.dmg)}`, tr.dmg > 0 ? "pos" : "neg"]);
+  if (tr.rng) c.push([`Range ${tr.rng > 0 ? "+" : ""}${pct(tr.rng)}`, tr.rng > 0 ? "pos" : "neg"]);
+  if (tr.spd) c.push([`Speed ${tr.spd > 0 ? "+" : ""}${pct(tr.spd)}`, tr.spd > 0 ? "pos" : "neg"]);
+  if (tr.cost) c.push([`${pct(tr.cost)} cheaper`, "pos"]);
+  if (tr.firstFree) c.push(["First upgrade free", "sp"]);
+  if (tr.streak) c.push([`${pct(tr.streak.p)} streak: ${tr.streak.n} hits at ${tr.streak.m}x`, "sp"]);
+  if (tr.crit) c.push([`${pct(tr.crit.p)} crit for ${tr.crit.m}x`, "sp"]);
+  if (tr.boss) c.push([`+${pct(tr.boss)} vs bosses`, "sp"]);
+  if (tr.burn) c.push([`Burn +${pct(tr.burn)}`, "sp"]);
+  if (tr.slow) c.push(["Slows enemies", "sp"]);
+  if (tr.auraBoost) c.push([`Buffs & income +${pct(tr.auraBoost - 1)}`, "sp"]);
+  return c;
+}
+function openTraitPicker(s){
+  const t = byId.get(s.id);
+  const items = TRAITS.map(tr => {
+    const on = s.trait === tr.id;
+    const b = h("button", { type:"button", class:"tp-item", "aria-pressed":String(on), style:`--tc:var(${TIER_COLOR[traitTier(tr.id)]})`,
+      onclick: () => { s.trait = tr.id; dlgTrait.close(); update(); toast(tr.id ? `${t.name}: ${tr.name}` : `${t.name}: trait removed`); } },
+      h("span", { class:"tp-top" }, h("span", { class:"tp-name", text:tr.name }), on ? h("span", { class:"tp-on", text:"✓ Selected" }) : null),
+      h("span", { class:"tp-desc", text:tr.desc }),
+      tr.id ? h("span", { class:"tp-chips" }, traitChips(tr).map(([x,k]) => h("span", { class:"tp-chip " + k, text:x }))) : null);
+    return b;
+  });
+  $("#tpBody").replaceChildren(
+    h("div", { class:"tp-head" },
+      h("div", {}, h("h2", { text:"Choose a trait" }), h("p", { text:`For ${t.name}. Tap a trait to apply it.` })),
+      h("button", { class:"x", type:"button", "aria-label":"Close", text:"✕", onclick: () => dlgTrait.close() })),
+    h("div", { class:"tp-list" }, items));
+  dlgTrait.showModal();
+  dlgTrait.scrollTop = 0;
+  const cur = items[s.trait];
+  if (cur && s.trait > 3) requestAnimationFrame(() => cur.scrollIntoView({ block:"center" }));
+}
+
+/* ---------- update ---------- */
+let lastWith, lastWithout;
+const short = n => n >= 1e6 ? (n/1e6).toFixed(2) + "M" : n >= 1e4 ? (n/1e3).toFixed(1) + "k" : fmt(n);
+function update(){
+  const per = state.players.map(tm => ({ w:compute(true, tm), o:compute(false, tm), n:used(tm) }));
+  lastWith = per[state.cur].w; lastWithout = per[state.cur].o;
+  // master bar: all four players
+  const sum = f => per.reduce((n,x) => n + f(x), 0);
+  bump($("#tbDps"), fmt(sum(x => x.w.total))); $("#tbDpsNo").textContent = fmt(sum(x => x.o.total));
+  bump($("#tbCost"), money(sum(x => x.w.cost))); $("#tbUnits").textContent = sum(x => x.n);
+  per.forEach((x,i) => { $("#ptd"+i).textContent = x.w.total > 0 ? short(x.w.total) + " DPS" : (state.players[i].length ? "support only" : "empty"); });
+  // current loadout
+  const P = state.cur + 1;
+  $("#cmpTitle").textContent = `Loadout DPS · Player ${P}`;
+  $("#teamTitle").textContent = `Player ${P} loadout`;
+  const w = lastWith.total, o = lastWithout.total;
+  const fit = n => n >= 1e8 ? short(n) : fmt(n);
+  $("#dpsWith").textContent = fit(w); $("#dpsWithout").textContent = fit(o);
+  const mx = Math.max(w, o, 1);
+  $("#barW").style.width = (w/mx*100) + "%"; $("#barO").style.width = (o/mx*100) + "%";
+  const hasSup = state.team.some(s => isSupport(byId.get(s.id)));
+  const g = $("#gain");
+  if (!hasSup){ g.textContent = "No support in this loadout"; g.className = "gain none"; }
+  else if (o <= 0){ g.textContent = "Supports ready"; g.className = "gain none"; }
+  else { const d = (w/o - 1); g.textContent = d > 0 ? `Buffs add +${pct(d)} (+${fmt(w-o)} DPS)` : "Supports not affecting any tower"; g.className = d > 0 ? "gain" : "gain none"; }
+  $("#stCost").textContent = money(lastWith.cost);
+  $("#stUnits").textContent = used(); $("#stSlots").textContent = state.team.length; $("#stInc").textContent = lastWith.income > 0 ? `Income ${money(lastWith.income)} / min` : "";
+  $("#stEff").textContent = lastWith.cost > 0 ? fmt(w/(lastWith.cost/1000)) : "0";
+  $("#stAA").textContent = (w > 0 ? Math.round(lastWith.aa/w*100) : 0) + "%";
+  $("#teamCount").textContent = state.team.length ? `${state.team.length} / ${MAX_SLOTS} slots · ${used()} / ${LIMITS.maxUnits} placed` : "";
+  if (panel.classList.contains("open")) $("#pinfo").textContent = `Player ${P}: ${state.team.length} / ${MAX_SLOTS} different towers · ${used()} / ${LIMITS.maxUnits} placed`;
+  document.querySelectorAll("[data-id]").forEach(el => { const r = lastWith.rows.get(el.dataset.id); if (r && el._upd) el._upd(r); });
+  if (activeId && !state.team.some(x => x.id === activeId)) activeId = null;
+  setActive(activeId);
+  if (modalUpd) modalUpd();
+  if (window.SD && window.SD.renderTips) { try { window.SD.renderTips(); } catch(err){ console.error(err); } }
+  writeHash();
+}
+function switchPlayer(i){
+  if (i === state.cur) return;
+  if (dlg.open) dlg.close();
+  state.cur = i; activeId = null;
+  document.querySelectorAll(".ptab").forEach((b,j) => b.setAttribute("aria-selected", String(j === i)));
+  renderTeam(); if (panel.classList.contains("open")) renderTiles(); update();
+}
+document.querySelectorAll(".ptab").forEach((b,i) => b.addEventListener("click", () => switchPlayer(i)));
+function structure(){ renderTeam(); if (panel.classList.contains("open")) renderTiles(); update(); }
+
+/* ---------- share / presets ---------- */
+const slotStr = s => [s.id, s.qty, s.up, s.lvl, s.trait, s.boss?1:0, s.stars||0, s.jumbo?1:0, s.shiny?1:0].join(":");
+const serialize = () => state.players.map((tm,i) => `t${i+1}=${tm.map(slotStr).join(",")}`).join("&") + `&cur=${state.cur+1}`;
+function writeHash(){ try { history.replaceState(null, "", "#" + serialize()); } catch(e){} }
+function parseTeam(csv, note){
+  const team = []; let units = 0;
+  for (const part of csv.split(",").filter(Boolean)){
+    const [id,qty,up,lvl,trait,boss,stars,jumbo,shiny] = part.split(":"), t = byId.get(id);
+    if (!t || team.some(x => x.id === id)) continue;
+    if (team.length >= MAX_SLOTS){ note.add("Trimmed to the 6-tower loadout limit."); continue; }
+    let q = clamp(parseInt(qty,10)||1, 1, t.maxPlaced);
+    if (units + q > LIMITS.maxUnits){ q = LIMITS.maxUnits - units; note.add("Trimmed to the 20-tower limit."); if (q < 1) continue; }
+    units += q;
+    team.push({ id, qty:q, up:clamp(parseInt(up,10)||0, 0, t.upgrades.length-1), lvl:clamp(parseInt(lvl,10)||1, 1, LIMITS.maxLevel),
+      trait: TRAITS[+trait] ? +trait : 0, boss: boss === "1", stars: clamp(parseInt(stars,10)||0, 0, 5), jumbo: jumbo === "1", shiny: shiny === "1" });
+  }
+  return team;
+}
+function parse(str){
+  const get = k => { const m = str.match(new RegExp(`(?:^|[&#])${k}=([^&#\\s]*)`)); return m ? m[1] : null; };
+  const note = new Set(), players = [[],[],[],[]];
+  let found = false;
+  for (let i = 0; i < 4; i++){ const v = get(`t${i+1}`); if (v != null){ found = true; players[i] = parseTeam(v, note); } }
+  const legacy = get("team");                       // links from older versions = Player 1
+  if (!found && legacy != null){ found = true; players[0] = parseTeam(legacy, note); }
+  if (!found) return null;
+  return { players, cur: clamp((parseInt(get("cur"),10)||1) - 1, 0, 3), note:[...note] };
+}
+function apply(p){
+  state.players = p.players; state.cur = p.cur; activeId = null;
+  document.querySelectorAll(".ptab").forEach((b,j) => b.setAttribute("aria-selected", String(j === state.cur)));
+  structure(); if (p.note.length) toast(p.note[0]);
+}
+const dlg2 = $("#dlg2");
+$("#dlg2Close").addEventListener("click", () => dlg2.close());
+$("#btnShare").addEventListener("click", async () => {
+  const url = location.href.split("#")[0] + "#" + serialize();
+  try { await navigator.clipboard.writeText(url); toast("Team link copied"); }
+  catch(e){ $("#linkBox").value = url; dlg2.showModal(); $("#linkBox").select(); }
+});
+// two-step clear: works everywhere (confirm() is blocked in many embedded previews)
+let clearTimer;
+const clearBtn = $("#btnClear");
+function disarm(){ clearTimeout(clearTimer); delete clearBtn.dataset.arm; clearBtn.textContent = "Clear loadout"; }
+clearBtn.addEventListener("click", () => {
+  if (!state.team.length) return toast("This loadout is already empty.");
+  if (clearBtn.dataset.arm !== "1"){
+    clearBtn.dataset.arm = "1"; clearBtn.textContent = "Tap again to clear";
+    clearTimer = setTimeout(disarm, 3000); return;
+  }
+  disarm(); if (dlg.open) dlg.close();
+  state.team = []; structure(); toast(`Player ${state.cur+1} loadout cleared`);
+});
+
+const PK = "snack-defense-builds-v1";
+const getP = () => { try { return JSON.parse(localStorage.getItem(PK)) || {}; } catch(e){ return {}; } };
+const setP = p => { try { localStorage.setItem(PK, JSON.stringify(p)); return true; } catch(e){ toast("Browser storage is unavailable."); return false; } };
+function renderPresets(){
+  const p = getP(), names = Object.keys(p);
+  $("#plist").replaceChildren(...(names.length ? names.map(n => h("li", {}, h("span", { text:n }),
+    h("span", { class:"b" },
+      h("button", { type:"button", text:"Load", onclick: () => { const r = parse(p[n]); if (r){ apply(r); toast(`Loaded "${n}"`); } } }),
+      h("button", { type:"button", class:"danger", text:"Delete", onclick: () => { const q = getP(); delete q[n]; setP(q); renderPresets(); } })))) : [h("li", { style:"color:var(--muted)" }, "No saved builds yet.")]));
+}
+$("#btnSave").addEventListener("click", () => {
+  const n = $("#presetName").value.trim();
+  if (!n) return toast("Name your build first.");
+  if (state.players.every(tm => !tm.length)) return toast("Add a tower before saving.");
+  const p = getP();
+  if (Object.keys(p).some(k => k.toLowerCase() === n.toLowerCase())){
+    const msg = `A build named "${n}" already exists. Choose a different name or delete the old one first.`;
+    $("#nameErr").textContent = msg; $("#nameErr").hidden = false; $("#presetName").classList.add("bad"); $("#presetName").focus();
+    return toast("That name is already taken.");
+  }
+  p[n] = serialize(); if (setP(p)){ $("#presetName").value = ""; renderPresets(); toast(`Saved "${n}"`); }
+});
+$("#presetName").addEventListener("input", () => { $("#nameErr").hidden = true; $("#presetName").classList.remove("bad"); });
+
+/* ---------- keyboard shortcuts ---------- */
+$("#vCards").addEventListener("click", () => setView("cards"));
+$("#vTable").addEventListener("click", () => setView("table"));
+document.addEventListener("keydown", e => {
+  if (e.ctrlKey || e.metaKey || e.altKey || dlg2.open || dlgTrait.open || (document.getElementById("dlgRank") || {}).open) return;
+  const el = e.target, tag = el.tagName, type = (el.type || "").toLowerCase();
+  const typing = tag === "TEXTAREA" || tag === "SELECT" || (tag === "INPUT" && type !== "range" && type !== "checkbox");
+  if (typing) return;
+  const onSlider = tag === "INPUT" && type === "range";
+  const slot = state.team.find(x => x.id === activeId);
+  const k = e.key;
+  if (k === "/"){ e.preventDefault(); openPanel(true); return; }
+  if (/^[1-6]$/.test(k)){
+    const s = state.team[+k - 1]; if (!s) return toast(`Slot ${k} is empty.`);
+    e.preventDefault();
+    if (dlg.open) openModal(s);
+    else { setActive(s.id); const n = document.querySelector(`[data-id="${s.id}"]`); if (n){ n.scrollIntoView({ behavior:smooth, block:"nearest" }); n.focus({ preventScroll:true }); } }
+    return;
+  }
+  if (!slot) return;
+  const t = byId.get(slot.id);
+  let used_ = true;
+  if (k === "+" || k === "=") setQty(slot, slot.qty + 1);
+  else if (k === "-" || k === "_") setQty(slot, slot.qty - 1);
+  else if (k === "]" || k === "[" || k === "}" || k === "{"){
+    const d = (k === "]" ? 1 : k === "[" ? -1 : k === "}" ? 5 : -5);
+    slot.lvl = clamp(slot.lvl + d, 1, LIMITS.maxLevel); update(); toast(`${t.name}: level ${slot.lvl}`);
+  }
+  else if ((k === "ArrowUp" || k === "ArrowDown") && !onSlider){
+    slot.up = clamp(slot.up + (k === "ArrowUp" ? 1 : -1), 0, t.upgrades.length - 1); update(); toast(`${t.name}: upgrade ${slot.up}/${t.upgrades.length-1}`);
+  }
+  else if (k === "s" || k === "S"){ slot.stars = clamp((slot.stars||0) + (k === "s" ? 1 : -1), 0, 5); update(); toast(`${t.name}: ${slot.stars} star${slot.stars === 1 ? "" : "s"}`); }
+  else if (k === "Enter" && !dlg.open && tag !== "BUTTON") openModal(slot);
+  else used_ = false;
+  if (used_) e.preventDefault();
+});
+
+/* ---------- API for the Rankings + Tips script ---------- */
+window.SD = { $, h, cap, fmt, money, pct, chip, state, byId, compute, addTower, structure, toast, typeTags, atkLabel, auraVal,
+  isApplied, isSupport, hasDps, jumboValid, used, MAX_SLOTS, TYPES, last: () => lastWith };
+window.__sdReady = true;
+
+/* ---------- init ---------- */
+renderChips(); renderTiles(); renderPresets();
+const init = /[#&](t[1-4]|team)=/.test(location.hash) ? parse(location.hash.slice(1)) : null;
+if (init) apply(init); else structure();
+})();
+</script>
+<script>
+/* Rankings + Tips. Separate script so a problem here can never break the core calculator. */
+(() => {
+"use strict";
+try {
+const { $, h, cap, fmt, money, pct, chip, state, byId, compute, addTower, structure, toast, typeTags, atkLabel, auraVal,
+  isApplied, isSupport, hasDps, jumboValid, used, MAX_SLOTS, TYPES, last } = window.SD;
+/* ---------- rankings ---------- */
+const dlgRank = $("#dlgRank");
+const RK_TABS = [
+  ["dps",   "Highest DPS",    "One tower, fully upgraded, no buffs."],
+  ["max",   "Max placed",     "Total DPS with every allowed copy placed, fully upgraded, no buffs."],
+  ["value", "Best value",     "DPS per $1,000 spent on a fully upgraded tower."],
+  ["early", "Early game",     "The most DPS you can buy with a budget. Extra copies and upgrades both count."],
+  ["range", "Most range",     "Longest range of a fully upgraded tower."],
+  ["buff",  "Strongest buff", "Support aura at the top upgrade. Timed buffs show the average of one tower."]
+];
+const rk = { kind:"dps", rar:new Set(), type:new Set(), aa:false, budget:3000, cat:"damage" };
+
+function rankData(){
+  const out = [];
+  for (const t of TOWERS){
+    if (rk.rar.size && !rk.rar.has(t.rarity)) continue;
+    if (rk.kind !== "buff"){
+      if (rk.aa && !t.antiAir) continue;
+      if (rk.type.size){ const g = typeTags(t); if (![...rk.type].some(f => g.has(f))) continue; }
+    }
+    const n = t.upgrades.length, last = t.upgrades[n-1];
+    let e = null;
+    if (rk.kind === "dps" && last.dps > 0){
+      e = { v:last.dps, val:fmt(last.dps) + " DPS", sub:`${money(last.totalSpent)} fully upgraded` };
+    } else if (rk.kind === "max" && last.dps > 0){
+      const v = last.dps * t.maxPlaced;
+      e = { v, val:fmt(v) + " DPS", sub:`${t.maxPlaced}× ${fmt(last.dps)} DPS · ${money(last.totalSpent * t.maxPlaced)}` };
+    } else if (rk.kind === "value" && last.dps > 0){
+      const v = last.dps / (last.totalSpent / 1000);
+      e = { v, val:fmt(v) + " / $1k", sub:`${fmt(last.dps)} DPS for ${money(last.totalSpent)}` };
+    } else if (rk.kind === "early"){
+      let best = null;
+      t.upgrades.forEach((u, i) => { for (let q = 1; q <= t.maxPlaced; q++){
+        if (q * u.totalSpent <= rk.budget && u.dps > 0){ const d = q * u.dps; if (!best || d > best.d) best = { d, q, i, spent:q * u.totalSpent }; }
+      }});
+      if (best) e = { v:best.d, val:fmt(best.d) + " DPS", sub:`${best.q}× at upgrade ${best.i}/${n-1} · ${money(best.spent)}` };
+    } else if (rk.kind === "range" && last.range > 0){
+      e = { v:last.range, val:(Math.round(last.range*10)/10) + " range", sub:atkLabel(t) };
+    } else if (rk.kind === "buff" && AURAS[t.name]){
+      const a = AURAS[t.name].find(x => x.cat === rk.cat);
+      if (a){ const v = auraVal(a, n-1); e = { v, val:"+" + pct(v), sub:`${money(last.totalSpent)} fully upgraded${TIMED_BUFFS.has(t.name) ? " · avg of 1 tower" : ""}` }; }
+    }
+    if (e && e.v > 0) out.push({ t, ...e });
+  }
+  return out.sort((a, b) => b.v - a.v);
+}
+
+function pickChips(opts, cur, cb){
+  return opts.map(([v, l]) => { const b = h("button", { type:"button", class:"chip", "aria-pressed":String(v === cur), text:l }); b.addEventListener("click", () => cb(v)); return b; });
+}
+function renderRankHead(){
+  const desc = RK_TABS.find(x => x[0] === rk.kind)[2];
+  const tabs = h("div", { class:"rk-tabs", role:"tablist" }, RK_TABS.map(([k, l]) => {
+    const b = h("button", { type:"button", role:"tab", class:"rk-tab", "aria-selected":String(rk.kind === k), text:l });
+    b.addEventListener("click", () => { rk.kind = k; renderRankHead(); renderRank(true); dlgRank.scrollTop = 0; });
+    return b;
+  }));
+  const rows = [h("div", { class:"chips" }, RARITIES.map(r => chip(cap(r), rk.rar.has(r), p => { p ? rk.rar.add(r) : rk.rar.delete(r); renderRank(true); })))];
+  if (rk.kind !== "buff") rows.push(h("div", { class:"chips" },
+    TYPES.map(r => chip(r, rk.type.has(r), p => { p ? rk.type.add(r) : rk.type.delete(r); renderRank(true); })),
+    chip("Anti-Air", rk.aa, p => { rk.aa = p; renderRank(true); })));
+  if (rk.kind === "early") rows.push(h("div", { class:"chips" }, h("span", { class:"hint2", text:"Budget" }),
+    pickChips([[1500,"$1,500"],[3000,"$3,000"],[5000,"$5,000"],[10000,"$10,000"]], rk.budget, v => { rk.budget = v; renderRankHead(); renderRank(true); })));
+  if (rk.kind === "buff") rows.push(h("div", { class:"chips" }, h("span", { class:"hint2", text:"Buff type" }),
+    pickChips([["damage","Damage"],["speed","Attack speed"],["range","Range"]], rk.cat, v => { rk.cat = v; renderRankHead(); renderRank(true); })));
+  $("#rkHead").replaceChildren(
+    h("div", { class:"rk-top" }, h("h2", { text:"Rankings" }), h("button", { class:"x", type:"button", "aria-label":"Close", text:"✕", onclick: () => dlgRank.close() })),
+    tabs, h("p", { class:"rk-desc", text:desc }), ...rows);
+}
+function renderRank(animate){
+  const body = $("#rkBody"), data = rankData(), sc = dlgRank.scrollTop;
+  body.classList.toggle("noanim", !animate);
+  if (!data.length){ body.replaceChildren(h("div", { class:"empty", text:"No towers match these filters. Clear a filter to see the ranking." })); return; }
+  const max = data[0].v || 1;
+  const inTeam = id => { const s = state.team.find(x => x.id === id); return s ? h("span", { class:"inl", text:`In loadout ×${s.qty}` }) : null; };
+  const add = e => { addTower(e.t.id); renderRank(false); };
+  const pod = [1, 0, 2].filter(i => data[i]).map(i => {
+    const e = data[i], r = i + 1;
+    return h("div", { class:`pod p${r}`, style:`--rc:var(--${e.t.rarity});--d:${i === 0 ? 0.15 : 0.3}s`, tabindex:"0", role:"button", "aria-label":`${e.t.name}, rank ${r}. Add to loadout`,
+      onclick: () => add(e), onkeydown: ev => { if (ev.key === "Enter") add(e); } },
+      h("div", { class:"rn", text:"#" + r }), h("div", { class:"nm", text:e.t.name }),
+      h("div", { class:"vl", text:e.val }), h("div", { class:"rr", text:cap(e.t.rarity) }), h("div", { class:"sb", text:e.sub }), inTeam(e.t.id));
+  });
+  const rows = data.slice(3).map((e, i) => {
+    const r = i + 4;
+    return h("div", { class:"rk-row", style:`--rc:var(--${e.t.rarity});--d:${Math.min(0.45 + i * 0.03, 1.2)}s`, tabindex:"0", role:"button", "aria-label":`${e.t.name}, rank ${r}. Add to loadout`,
+      onclick: () => add(e), onkeydown: ev => { if (ev.key === "Enter") add(e); } },
+      h("div", { class:"rk-n", text:String(r) }),
+      h("div", { class:"rk-name" }, h("b", { text:e.t.name }), h("small", { text:`${cap(e.t.rarity)} · ${e.sub}` }), inTeam(e.t.id)),
+      h("div", { class:"rk-bar" }, h("i", { "data-w":String(e.v / max * 100) })),
+      h("div", { class:"rk-val", text:e.val }));
+  });
+  body.replaceChildren(h("div", { class:"rk-podium" }, pod), h("div", { class:"rk-list" }, rows));
+  const setBars = () => body.querySelectorAll(".rk-bar i").forEach(b => { b.style.width = b.dataset.w + "%"; });
+  if (animate) requestAnimationFrame(() => requestAnimationFrame(setBars)); else setBars();
+  dlgRank.scrollTop = sc;
+}
+
+function openRank(){
+  renderRankHead(); renderRank(true);
+  if (!dlgRank.open) dlgRank.showModal();
+  dlgRank.scrollTop = 0;
+}
+const rankBtn = $("#btnRank2");
+if (rankBtn) rankBtn.addEventListener("click", openRank);
+dlgRank.addEventListener("click", e => { if (e.target === dlgRank) dlgRank.close(); });
+} catch (err) { console.error("Rankings script:", err); }
+})();
+</script>
+<script data-goatcounter="https://fxnncalc.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
